@@ -2,7 +2,7 @@ CREATE TABLE budget (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id TEXT NOT NULL,
     title TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL
+    created_at TIMESTAMP NOT NULL DEFAULT current_timestamp
 );
 
 CREATE TABLE item (
