@@ -1,5 +1,12 @@
+use std::sync::Arc;
+
+use axum::{
+    routing::{get, post},
+    Router,
+};
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use uuid::Uuid;
 
 // Models
@@ -35,6 +42,16 @@ impl From<&Budget> for BudgetDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateBudget {
     title: String,
+}
+
+pub fn budget_router(pool: &Arc<PgPool>) -> Router {
+    Router::new()
+        .route("/", get(endpoints::get_all_budgets))
+        .with_state(pool.clone())
+        .route("/", post(endpoints::create_budget))
+        .with_state(pool.clone())
+        .route("/:id", get(endpoints::get_budget))
+        .with_state(pool.clone())
 }
 
 // Endpoints
