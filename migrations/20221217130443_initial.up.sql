@@ -6,6 +6,7 @@ CREATE TABLE budget (
 );
 
 CREATE TABLE item (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     budget_id UUID NOT NULL,
     category TEXT NOT NULL,
     name TEXT NOT NULL,

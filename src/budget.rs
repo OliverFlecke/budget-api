@@ -4,7 +4,7 @@ mod model;
 use std::sync::Arc;
 
 use axum::{
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
 };
 use sqlx::PgPool;
@@ -12,6 +12,8 @@ use sqlx::PgPool;
 pub fn budget_router(pool: &Arc<PgPool>) -> Router {
     let item_router = Router::new()
         .route("/", post(endpoints::add_item_to_budget))
+        .with_state(pool.clone())
+        .route("/:item_id", put(endpoints::update_item))
         .with_state(pool.clone());
 
     Router::new()
@@ -41,7 +43,7 @@ mod endpoints {
         model::Budget,
     };
 
-    use super::dto::AddItemToBudgetRequest;
+    use super::dto::{AddItemToBudgetRequest, UpdateItemOnBudgetRequest};
 
     /// Get a budget from a given ID.
     pub async fn get_budget(
@@ -98,6 +100,28 @@ mod endpoints {
             payload.category,
             payload.name,
             payload.amount
+        );
+
+        match query.execute(pool.as_ref()).await {
+            Ok(_) => StatusCode::ACCEPTED,
+            Err(_) => StatusCode::BAD_REQUEST,
+        }
+    }
+
+    /// Update an item on a budget
+    pub async fn update_item(
+        State(pool): State<Arc<PgPool>>,
+        Path((_budget_id, item_id)): Path<(Uuid, Uuid)>,
+        Json(payload): Json<AddItemToBudgetRequest>,
+    ) -> StatusCode {
+        // TODO: Validate user has access to budget (necessary for more than just this endpoint)
+
+        let query = sqlx::query!(
+            "UPDATE item SET category = $1, amount = $2, name = $3 WHERE id = $4",
+            payload.category,
+            payload.amount,
+            payload.name,
+            item_id
         );
 
         match query.execute(pool.as_ref()).await {
