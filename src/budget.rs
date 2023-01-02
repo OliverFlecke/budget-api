@@ -4,7 +4,7 @@ mod model;
 use std::sync::Arc;
 
 use axum::{
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Router,
 };
 use sqlx::PgPool;
@@ -14,6 +14,8 @@ pub fn budget_router(pool: &Arc<PgPool>) -> Router {
         .route("/", post(endpoints::add_item_to_budget))
         .with_state(pool.clone())
         .route("/:item_id", put(endpoints::update_item))
+        .with_state(pool.clone())
+        .route("/:item_id", delete(endpoints::delete_item))
         .with_state(pool.clone());
 
     Router::new()
@@ -43,7 +45,7 @@ mod endpoints {
         model::Budget,
     };
 
-    use super::dto::{AddItemToBudgetRequest, UpdateItemOnBudgetRequest};
+    use super::dto::AddItemToBudgetRequest;
 
     /// Get a budget from a given ID.
     pub async fn get_budget(
@@ -123,6 +125,19 @@ mod endpoints {
             payload.name,
             item_id
         );
+
+        match query.execute(pool.as_ref()).await {
+            Ok(_) => StatusCode::ACCEPTED,
+            Err(_) => StatusCode::BAD_REQUEST,
+        }
+    }
+
+    /// Delete an item.
+    pub async fn delete_item(
+        State(pool): State<Arc<PgPool>>,
+        Path((_, item_id)): Path<(Uuid, Uuid)>,
+    ) -> StatusCode {
+        let query = sqlx::query!("DELETE FROM item WHERE id = $1", item_id);
 
         match query.execute(pool.as_ref()).await {
             Ok(_) => StatusCode::ACCEPTED,
