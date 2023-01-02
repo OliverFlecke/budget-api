@@ -60,6 +60,7 @@ pub mod endpoints {
 
     use axum::{
         extract::{Path, State},
+        http::StatusCode,
         Json,
     };
     use sqlx::PgPool;
@@ -70,21 +71,22 @@ pub mod endpoints {
     pub async fn get_budget(
         Path(budget_id): Path<Uuid>,
         State(pool): State<Arc<PgPool>>,
-    ) -> Json<BudgetDto> {
-        let budget = sqlx::query_as!(Budget, "SELECT * FROM budget WHERE id = $1", budget_id)
-            .fetch_one(pool.as_ref())
-            .await;
-        // TODO: Handle not found
-        Json((&budget.unwrap()).into())
+    ) -> Result<Json<BudgetDto>, StatusCode> {
+        let query = sqlx::query_as!(Budget, "SELECT * FROM budget WHERE id = $1", budget_id);
+
+        match query.fetch_one(pool.as_ref()).await {
+            Ok(budget) => Ok(Json((&budget).into())),
+            Err(_) => Err(StatusCode::NOT_FOUND),
+        }
     }
 
     pub async fn get_all_budgets(State(pool): State<Arc<PgPool>>) -> Json<Vec<BudgetDto>> {
-        let budget = sqlx::query_as!(Budget, "SELECT * FROM budget")
-            .fetch_all(pool.as_ref())
-            .await;
+        let query = sqlx::query_as!(Budget, "SELECT * FROM budget");
 
         Json(
-            budget
+            query
+                .fetch_all(pool.as_ref())
+                .await
                 .unwrap()
                 .iter()
                 .map(|x| x.into())
