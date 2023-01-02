@@ -1,50 +1,19 @@
+mod dto;
+mod model;
+
 use std::sync::Arc;
 
 use axum::{
     routing::{get, post},
     Router,
 };
-use chrono::{DateTime, NaiveDateTime, Utc};
-use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use uuid::Uuid;
-
-// Models
-
-struct Budget {
-    id: Uuid,
-    user_id: String,
-    title: String,
-    created_at: NaiveDateTime,
-}
-
-// DTOs
-
-#[derive(Debug, Serialize)]
-pub struct BudgetDto {
-    id: Uuid,
-    user_id: String,
-    title: String,
-    created_at: DateTime<Utc>,
-}
-
-impl From<&Budget> for BudgetDto {
-    fn from(from: &Budget) -> Self {
-        Self {
-            id: from.id,
-            user_id: from.user_id.to_owned(),
-            title: from.title.to_owned(),
-            created_at: DateTime::from_utc(from.created_at, Utc),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CreateBudget {
-    title: String,
-}
 
 pub fn budget_router(pool: &Arc<PgPool>) -> Router {
+    let item_router = Router::new()
+        .route("/", post(endpoints::add_item_to_budget))
+        .with_state(pool.clone());
+
     Router::new()
         .route("/", get(endpoints::get_all_budgets))
         .with_state(pool.clone())
@@ -52,10 +21,11 @@ pub fn budget_router(pool: &Arc<PgPool>) -> Router {
         .with_state(pool.clone())
         .route("/:id", get(endpoints::get_budget))
         .with_state(pool.clone())
+        .nest("/:id/item", item_router)
 }
 
 // Endpoints
-pub mod endpoints {
+mod endpoints {
     use std::sync::Arc;
 
     use axum::{
@@ -66,8 +36,14 @@ pub mod endpoints {
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use super::{Budget, BudgetDto, CreateBudget};
+    use crate::budget::{
+        dto::{BudgetDto, CreateBudget},
+        model::Budget,
+    };
 
+    use super::dto::AddItemToBudgetRequest;
+
+    /// Get a budget from a given ID.
     pub async fn get_budget(
         Path(budget_id): Path<Uuid>,
         State(pool): State<Arc<PgPool>>,
@@ -80,6 +56,9 @@ pub mod endpoints {
         }
     }
 
+    /// Get all budgets in the database.
+    ///
+    /// NOTE: This will not continue to be exposed to end users.
     pub async fn get_all_budgets(State(pool): State<Arc<PgPool>>) -> Json<Vec<BudgetDto>> {
         let query = sqlx::query_as!(Budget, "SELECT * FROM budget");
 
@@ -94,6 +73,7 @@ pub mod endpoints {
         )
     }
 
+    /// Create a new budget.
     pub async fn create_budget(State(pool): State<Arc<PgPool>>, Json(payload): Json<CreateBudget>) {
         let user_id = Uuid::new_v4().to_string(); // TODO: Get user id from auth token
         sqlx::query!(
@@ -104,5 +84,25 @@ pub mod endpoints {
         .execute(pool.as_ref())
         .await
         .unwrap();
+    }
+
+    /// Add a new item to a budget.
+    pub async fn add_item_to_budget(
+        State(pool): State<Arc<PgPool>>,
+        Path(budget_id): Path<Uuid>,
+        Json(payload): Json<AddItemToBudgetRequest>,
+    ) -> StatusCode {
+        let query = sqlx::query!(
+            "INSERT INTO item (budget_id, category, name, amount) VALUES ($1, $2, $3, $4)",
+            budget_id,
+            payload.category,
+            payload.name,
+            payload.amount
+        );
+
+        match query.execute(pool.as_ref()).await {
+            Ok(_) => StatusCode::ACCEPTED,
+            Err(_) => StatusCode::BAD_REQUEST,
+        }
     }
 }

@@ -18,7 +18,7 @@ async fn main() {
         .fallback(not_found);
 
     // run it with hyper on localhost:3000
-    let host = "0.0.0.0:3000".parse().unwrap();
+    let host = "0.0.0.0:4000".parse().unwrap();
     println!("Server running at {host}");
     axum::Server::bind(&host)
         .serve(app.into_make_service())
