@@ -42,20 +42,18 @@ mod endpoints {
 
     use crate::{
         auth::ExtractUserId,
-        budget::{
-            dto::{self},
-            model::{self},
-        },
+        budget::{dto, model},
     };
 
     use super::dto::AddItemToBudgetRequest;
 
     /// Get a budget from a given ID.
     pub async fn get_budget(
-        Path(budget_id): Path<Uuid>,
         State(pool): State<Arc<PgPool>>,
+        Path(budget_id): Path<Uuid>,
+        ExtractUserId(user_id): ExtractUserId,
     ) -> Result<Json<dto::BudgetWithItems>, StatusCode> {
-        println!("Get budget {budget_id}");
+        println!("Get budget {budget_id} and user: {user_id}");
 
         let query = sqlx::query_as!(
             model::BudgetWithItems,
@@ -63,23 +61,34 @@ mod endpoints {
 array_agg((i.id, i.budget_id, i.category, i.name, i.amount, i.created_at, i.modified)) as "items!: Vec<model::Item>"
 FROM budget AS b
 LEFT JOIN item AS i ON b.id = i.budget_id
-WHERE b.id = $1
+WHERE b.id = $1 AND b.user_id = $2
 GROUP BY b.id
 "#,
-            budget_id
+            budget_id,
+            user_id
         );
 
         match query.fetch_one(pool.as_ref()).await {
             Ok(budget) => Ok(Json((&budget).into())),
-            Err(_) => Err(StatusCode::NOT_FOUND),
+            Err(err) => {
+                println!("Error: {err:?}");
+                Err(StatusCode::NOT_FOUND)
+            }
         }
     }
 
     /// Get all budgets in the database.
     ///
     /// NOTE: This will not continue to be exposed to end users.
-    pub async fn get_all_budgets(State(pool): State<Arc<PgPool>>) -> Json<Vec<dto::Budget>> {
-        let query = sqlx::query_as!(model::Budget, "SELECT * FROM budget");
+    pub async fn get_all_budgets(
+        State(pool): State<Arc<PgPool>>,
+        ExtractUserId(user_id): ExtractUserId,
+    ) -> Json<Vec<dto::Budget>> {
+        let query = sqlx::query_as!(
+            model::Budget,
+            "SELECT * FROM budget WHERE user_id = $1",
+            user_id
+        );
 
         Json(
             query

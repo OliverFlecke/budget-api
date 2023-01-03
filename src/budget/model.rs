@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use uuid::Uuid;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BudgetWithItems {
     pub id: Uuid,
     pub user_id: String,
@@ -11,7 +11,7 @@ pub struct BudgetWithItems {
 }
 
 /// Datamodel for the `Budget` table
-#[derive(Debug, sqlx::Type)]
+#[derive(Debug, Clone, sqlx::Type)]
 pub struct Budget {
     pub id: Uuid,
     pub user_id: String,
@@ -20,7 +20,7 @@ pub struct Budget {
 }
 
 /// Datamodel for the `Item` table.
-#[derive(Debug, sqlx::Type)]
+#[derive(Debug, Clone, sqlx::Type)]
 pub struct Item {
     pub id: Uuid,
     pub budget_id: Uuid,
