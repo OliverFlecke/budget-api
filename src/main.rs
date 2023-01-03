@@ -9,8 +9,9 @@ use sqlx::postgres::PgPool;
 
 #[tokio::main]
 async fn main() {
-    let url = "postgres://postgres:password@localhost:5432/finance";
-    let pool = Arc::new(PgPool::connect(url).await.unwrap());
+    let url = std::env::var("DATABASE_URL")
+        .expect("Missing environment variable 'DATABASE_URL' provided with a connection string");
+    let pool = Arc::new(PgPool::connect(&url).await.unwrap());
 
     let budget_router = budget_router(&pool);
     let app = Router::new()
