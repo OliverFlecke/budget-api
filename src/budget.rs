@@ -40,9 +40,12 @@ mod endpoints {
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::budget::{
-        dto::{self},
-        model::{self},
+    use crate::{
+        auth::ExtractUserId,
+        budget::{
+            dto::{self},
+            model::{self},
+        },
     };
 
     use super::dto::AddItemToBudgetRequest;
@@ -92,9 +95,9 @@ GROUP BY b.id
     /// Create a new budget.
     pub async fn create_budget(
         State(pool): State<Arc<PgPool>>,
+        ExtractUserId(user_id): ExtractUserId,
         Json(payload): Json<dto::CreateBudget>,
     ) {
-        let user_id = Uuid::new_v4().to_string(); // TODO: Get user id from auth token
         sqlx::query!(
             "INSERT INTO budget (user_id, title) VALUES ($1, $2)",
             user_id,
