@@ -41,8 +41,8 @@ mod endpoints {
     use uuid::Uuid;
 
     use crate::budget::{
-        dto::{BudgetDto, CreateBudget},
-        model::Budget,
+        dto::{self},
+        model::{self},
     };
 
     use super::dto::AddItemToBudgetRequest;
@@ -51,8 +51,20 @@ mod endpoints {
     pub async fn get_budget(
         Path(budget_id): Path<Uuid>,
         State(pool): State<Arc<PgPool>>,
-    ) -> Result<Json<BudgetDto>, StatusCode> {
-        let query = sqlx::query_as!(Budget, "SELECT * FROM budget WHERE id = $1", budget_id);
+    ) -> Result<Json<dto::BudgetWithItems>, StatusCode> {
+        println!("Get budget {budget_id}");
+
+        let query = sqlx::query_as!(
+            model::BudgetWithItems,
+            r#"SELECT b.*,
+array_agg((i.id, i.budget_id, i.category, i.name, i.amount, i.created_at, i.modified)) as "items!: Vec<model::Item>"
+FROM budget AS b
+LEFT JOIN item AS i ON b.id = i.budget_id
+WHERE b.id = $1
+GROUP BY b.id
+"#,
+            budget_id
+        );
 
         match query.fetch_one(pool.as_ref()).await {
             Ok(budget) => Ok(Json((&budget).into())),
@@ -63,8 +75,8 @@ mod endpoints {
     /// Get all budgets in the database.
     ///
     /// NOTE: This will not continue to be exposed to end users.
-    pub async fn get_all_budgets(State(pool): State<Arc<PgPool>>) -> Json<Vec<BudgetDto>> {
-        let query = sqlx::query_as!(Budget, "SELECT * FROM budget");
+    pub async fn get_all_budgets(State(pool): State<Arc<PgPool>>) -> Json<Vec<dto::Budget>> {
+        let query = sqlx::query_as!(model::Budget, "SELECT * FROM budget");
 
         Json(
             query
@@ -73,12 +85,15 @@ mod endpoints {
                 .unwrap()
                 .iter()
                 .map(|x| x.into())
-                .collect::<Vec<BudgetDto>>(),
+                .collect::<Vec<dto::Budget>>(),
         )
     }
 
     /// Create a new budget.
-    pub async fn create_budget(State(pool): State<Arc<PgPool>>, Json(payload): Json<CreateBudget>) {
+    pub async fn create_budget(
+        State(pool): State<Arc<PgPool>>,
+        Json(payload): Json<dto::CreateBudget>,
+    ) {
         let user_id = Uuid::new_v4().to_string(); // TODO: Get user id from auth token
         sqlx::query!(
             "INSERT INTO budget (user_id, title) VALUES ($1, $2)",
@@ -89,6 +104,12 @@ mod endpoints {
         .await
         .unwrap();
     }
+
+    // pub async fn get_item(State(pool): State<Arc<PgPool>>, Path(item_id): Path<Uuid>) {
+    //     let query = sqlx::query_as!(model::Item, "SELECT * FROM item WHERE id = $1", item_id);
+
+    //     query.fetch_one(pool.as_ref()).await;
+    // }
 
     /// Add a new item to a budget.
     pub async fn add_item_to_budget(
