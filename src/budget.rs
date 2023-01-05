@@ -58,7 +58,13 @@ mod endpoints {
         let query = sqlx::query_as!(
             model::BudgetWithItems,
             r#"SELECT b.*,
-array_agg((i.id, i.budget_id, i.category, i.name, i.amount, i.created_at, i.modified)) as "items!: Vec<model::Item>"
+CASE
+    WHEN count(i) = 0 THEN '{}'
+    ELSE
+        array_agg(
+            (i.id, i.budget_id, i.category, i.name, i.amount, i.created_at, i.modified)
+        )
+    END as "items!: Vec<model::Item>"
 FROM budget AS b
 LEFT JOIN item AS i ON b.id = i.budget_id
 WHERE b.id = $1 AND b.user_id = $2
