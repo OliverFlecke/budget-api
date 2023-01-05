@@ -1,5 +1,18 @@
 {
   "db": "PostgreSQL",
+  "027c89924bf634ee09ca393854844602d63fcb715ef9729b4c63813717974005": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "DELETE FROM budget WHERE user_id = $1 AND id = $2"
+  },
   "5faaae87035de45d9c43fa9baa3ec1e62cce8377d27cec6a01382cb4ed53f632": {
     "describe": {
       "columns": [],

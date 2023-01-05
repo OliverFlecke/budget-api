@@ -14,6 +14,8 @@ impl BudgetRepository {
         Self { db_pool }
     }
 
+    /// Create a new budget with a title for the given user, returning the unique id
+    /// of the newly created budget.
     pub async fn create_budget(&self, user_id: &str, title: &str) -> Result<Uuid, ()> {
         match sqlx::query_scalar!(
             r#"INSERT INTO budget (user_id, title) VALUES ($1, $2) RETURNING id"#,
@@ -28,6 +30,8 @@ impl BudgetRepository {
         }
     }
 
+    /// Get a budget for a specify user, along with all the items that are in the budget,
+    /// if one with the given id exists.
     pub async fn get_budget(
         &self,
         user_id: &str,
@@ -61,6 +65,7 @@ GROUP BY b.id
         }
     }
 
+    /// Get all budgets that a given user have created.
     pub async fn get_all_budgets_for_user(&self, user_id: &str) -> Vec<model::Budget> {
         let query = sqlx::query_as!(
             model::Budget,
@@ -73,6 +78,24 @@ GROUP BY b.id
             Err(err) => {
                 println!("Error: {err:?}");
                 vec![]
+            }
+        }
+    }
+
+    #[allow(dead_code)]
+    /// Delete a user's budget.
+    pub async fn delete_budget(&self, user_id: &str, budget_id: &Uuid) -> Result<(), ()> {
+        let query = sqlx::query!(
+            "DELETE FROM budget WHERE user_id = $1 AND id = $2",
+            user_id,
+            budget_id
+        );
+
+        match query.execute(self.db_pool.as_ref()).await {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                println!("Error: {err:?}");
+                Err(())
             }
         }
     }
@@ -151,6 +174,39 @@ mod test {
 
         let budgets = repo.get_all_budgets_for_user(USER_ID).await;
         assert_eq!(budgets.len(), 3);
+
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn delete_budget_for_a_user(pool: PgPool) -> sqlx::Result<()> {
+        let repo = BudgetRepository::new(Arc::new(pool));
+        // Arrange
+        let budget_id = repo
+            .create_budget(USER_ID, "budget to be deleted")
+            .await
+            .unwrap();
+
+        // Act
+        assert!(repo.delete_budget(USER_ID, &budget_id).await.is_ok());
+
+        // Assert
+        assert_eq!(repo.get_budget(USER_ID, &budget_id).await, None);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("budget_with_items"))]
+    async fn delete_budget_with_items_for_user(pool: PgPool) -> sqlx::Result<()> {
+        let repo = BudgetRepository::new(Arc::new(pool));
+        // Arrange
+        let budget_id = Uuid::parse_str("b8d6ff4e-c12f-416b-a611-8ad0c90669fe").unwrap();
+
+        // Act
+        assert!(repo.delete_budget(USER_ID, &budget_id).await.is_ok());
+
+        // Assert
+        assert_eq!(repo.get_budget(USER_ID, &budget_id).await, None);
 
         Ok(())
     }
