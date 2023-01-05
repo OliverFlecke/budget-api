@@ -69,37 +69,15 @@ mod endpoints {
 
     /// Get a budget from a given ID.
     pub async fn get_budget(
-        State(pool): State<Arc<PgPool>>,
+        State(repository): State<Arc<BudgetRepository>>,
         Path(budget_id): Path<Uuid>,
         ExtractUserId(user_id): ExtractUserId,
     ) -> Result<Json<dto::BudgetWithItems>, StatusCode> {
         println!("Get budget {budget_id} and user: {user_id}");
 
-        let query = sqlx::query_as!(
-            model::BudgetWithItems,
-            r#"SELECT b.*,
-CASE
-    WHEN count(i) = 0 THEN '{}'
-    ELSE
-        array_agg(
-            (i.id, i.budget_id, i.category, i.name, i.amount, i.created_at, i.modified)
-        )
-    END as "items!: Vec<model::Item>"
-FROM budget AS b
-LEFT JOIN item AS i ON b.id = i.budget_id
-WHERE b.id = $1 AND b.user_id = $2
-GROUP BY b.id
-"#,
-            budget_id,
-            user_id
-        );
-
-        match query.fetch_one(pool.as_ref()).await {
-            Ok(budget) => Ok(Json((&budget).into())),
-            Err(err) => {
-                println!("Error: {err:?}");
-                Err(StatusCode::NOT_FOUND)
-            }
+        match repository.get_budget(&user_id, &budget_id).await {
+            Some(budget) => Ok(Json((&budget).into())),
+            None => Err(StatusCode::NOT_FOUND),
         }
     }
 

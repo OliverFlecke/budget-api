@@ -1,18 +1,5 @@
 {
   "db": "PostgreSQL",
-  "11eb62ab650b12f30e41c1358588eff4c19d1aa30315c11c90d09b86c3cfbb87": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Text"
-        ]
-      }
-    },
-    "query": "INSERT INTO budget (user_id, title) VALUES ($1, $2)"
-  },
   "5faaae87035de45d9c43fa9baa3ec1e62cce8377d27cec6a01382cb4ed53f632": {
     "describe": {
       "columns": [],
@@ -92,6 +79,27 @@
       }
     },
     "query": "SELECT * FROM budget WHERE user_id = $1"
+  },
+  "d61d5d98eaaa0674a57c190dc5bb4914658dd9ddec816d93ee261131609c5c8c": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text"
+        ]
+      }
+    },
+    "query": "INSERT INTO budget (user_id, title) VALUES ($1, $2) RETURNING id"
   },
   "fe8bdfe27eeb48a35c0a1f13952ae1d659f72915422ec4b2edf353e49c450a30": {
     "describe": {
