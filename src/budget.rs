@@ -1,5 +1,6 @@
 mod dto;
 mod model;
+mod repository;
 
 use std::sync::Arc;
 
@@ -9,7 +10,11 @@ use axum::{
 };
 use sqlx::PgPool;
 
+use self::repository::BudgetRepository;
+
 pub fn budget_router(pool: &Arc<PgPool>) -> Router {
+    let budget_repository = Arc::new(BudgetRepository::new(pool.clone()));
+
     let item_router = Router::new()
         .route("/", post(endpoints::add_item_to_budget))
         .with_state(pool.clone())
@@ -22,7 +27,7 @@ pub fn budget_router(pool: &Arc<PgPool>) -> Router {
         .route("/", get(endpoints::get_all_budgets))
         .with_state(pool.clone())
         .route("/", post(endpoints::create_budget))
-        .with_state(pool.clone())
+        .with_state(budget_repository.clone())
         .route("/:id", get(endpoints::get_budget))
         .with_state(pool.clone())
         .nest("/:id/item", item_router)
@@ -45,7 +50,22 @@ mod endpoints {
         budget::{dto, model},
     };
 
-    use super::dto::AddItemToBudgetRequest;
+    use super::{dto::AddItemToBudgetRequest, repository::BudgetRepository};
+
+    /// Create a new budget.
+    pub async fn create_budget(
+        State(repository): State<Arc<BudgetRepository>>,
+        ExtractUserId(user_id): ExtractUserId,
+        Json(payload): Json<dto::CreateBudget>,
+    ) -> StatusCode {
+        match repository
+            .create_budget(user_id.as_str(), &payload.title)
+            .await
+        {
+            Ok(_) => StatusCode::OK,
+            Err(_) => StatusCode::BAD_REQUEST,
+        }
+    }
 
     /// Get a budget from a given ID.
     pub async fn get_budget(
@@ -105,22 +125,6 @@ GROUP BY b.id
                 .map(|x| x.into())
                 .collect::<Vec<dto::Budget>>(),
         )
-    }
-
-    /// Create a new budget.
-    pub async fn create_budget(
-        State(pool): State<Arc<PgPool>>,
-        ExtractUserId(user_id): ExtractUserId,
-        Json(payload): Json<dto::CreateBudget>,
-    ) {
-        sqlx::query!(
-            "INSERT INTO budget (user_id, title) VALUES ($1, $2)",
-            user_id,
-            payload.title
-        )
-        .execute(pool.as_ref())
-        .await
-        .unwrap();
     }
 
     // pub async fn get_item(State(pool): State<Arc<PgPool>>, Path(item_id): Path<Uuid>) {
