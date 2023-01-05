@@ -25,11 +25,11 @@ pub fn budget_router(pool: &Arc<PgPool>) -> Router {
 
     Router::new()
         .route("/", get(endpoints::get_all_budgets))
-        .with_state(pool.clone())
+        .with_state(budget_repository.clone())
         .route("/", post(endpoints::create_budget))
         .with_state(budget_repository.clone())
         .route("/:id", get(endpoints::get_budget))
-        .with_state(pool.clone())
+        .with_state(budget_repository.clone())
         .nest("/:id/item", item_router)
 }
 
@@ -45,10 +45,7 @@ mod endpoints {
     use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::{
-        auth::ExtractUserId,
-        budget::{dto, model},
-    };
+    use crate::{auth::ExtractUserId, budget::dto};
 
     use super::{dto::AddItemToBudgetRequest, repository::BudgetRepository};
 
@@ -85,20 +82,13 @@ mod endpoints {
     ///
     /// NOTE: This will not continue to be exposed to end users.
     pub async fn get_all_budgets(
-        State(pool): State<Arc<PgPool>>,
+        State(repository): State<Arc<BudgetRepository>>,
         ExtractUserId(user_id): ExtractUserId,
     ) -> Json<Vec<dto::Budget>> {
-        let query = sqlx::query_as!(
-            model::Budget,
-            "SELECT * FROM budget WHERE user_id = $1",
-            user_id
-        );
-
         Json(
-            query
-                .fetch_all(pool.as_ref())
+            repository
+                .get_all_budgets_for_user(&user_id)
                 .await
-                .unwrap()
                 .iter()
                 .map(|x| x.into())
                 .collect::<Vec<dto::Budget>>(),

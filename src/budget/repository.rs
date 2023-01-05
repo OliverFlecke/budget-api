@@ -60,6 +60,22 @@ GROUP BY b.id
             }
         }
     }
+
+    pub async fn get_all_budgets_for_user(&self, user_id: &str) -> Vec<model::Budget> {
+        let query = sqlx::query_as!(
+            model::Budget,
+            "SELECT * FROM budget WHERE user_id = $1",
+            user_id
+        );
+
+        match query.fetch_all(self.db_pool.as_ref()).await {
+            Ok(budgets) => budgets,
+            Err(err) => {
+                println!("Error: {err:?}");
+                vec![]
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -125,6 +141,16 @@ mod test {
         assert_eq!(budget.items[2].category, "Food");
         assert_eq!(budget.items[2].name, "Restaurants");
         assert_eq!(budget.items[2].amount, 10);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("budget_multiple"))]
+    async fn get_all_budgets_for_alice(pool: PgPool) -> sqlx::Result<()> {
+        let repo = BudgetRepository::new(Arc::new(pool));
+
+        let budgets = repo.get_all_budgets_for_user(USER_ID).await;
+        assert_eq!(budgets.len(), 3);
 
         Ok(())
     }
