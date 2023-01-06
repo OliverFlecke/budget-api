@@ -1,6 +1,7 @@
 mod dto;
 mod model;
 mod repository;
+mod item_repository;
 
 use std::sync::Arc;
 
@@ -10,10 +11,11 @@ use axum::{
 };
 use sqlx::PgPool;
 
-use self::repository::BudgetRepository;
+use self::{repository::BudgetRepository, item_repository::ItemRepository};
 
 pub fn budget_router(pool: &Arc<PgPool>) -> Router {
     let budget_repository = Arc::new(BudgetRepository::new(pool.clone()));
+    let item_repository = Arc::new(ItemRepository::new(pool.clone()));
 
     let item_router = Router::new()
         .route("/", post(endpoints::add_item_to_budget))
@@ -94,12 +96,6 @@ mod endpoints {
                 .collect::<Vec<dto::Budget>>(),
         )
     }
-
-    // pub async fn get_item(State(pool): State<Arc<PgPool>>, Path(item_id): Path<Uuid>) {
-    //     let query = sqlx::query_as!(model::Item, "SELECT * FROM item WHERE id = $1", item_id);
-
-    //     query.fetch_one(pool.as_ref()).await;
-    // }
 
     /// Add a new item to a budget.
     pub async fn add_item_to_budget(

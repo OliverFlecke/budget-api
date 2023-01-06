@@ -1,0 +1,130 @@
+use std::sync::Arc;
+
+use sqlx::PgPool;
+use uuid::Uuid;
+
+use super::{dto, model};
+
+/// Repository to access items.
+/// Abstracts away the DB interations for items.
+pub struct ItemRepository {
+    db_pool: Arc<PgPool>,
+}
+
+impl ItemRepository {
+    pub fn new(db_pool: Arc<PgPool>) -> Self {
+        Self { db_pool }
+    }
+
+    /// Get the item by its id.
+    #[allow(dead_code)]
+    pub async fn get_item(&self, item_id: Uuid) -> Option<model::Item> {
+        let query = sqlx::query_as!(model::Item, "SELECT * FROM item WHERE id = $1", item_id);
+
+        match query.fetch_one(self.db_pool.as_ref()).await {
+            Ok(item) => Some(item),
+            Err(_) => None,
+        }
+    }
+
+    /// Add a new item to a budget.
+    pub async fn add_item_to_budget(
+        &self,
+        budget_id: Uuid,
+        payload: dto::AddItemToBudgetRequest,
+    ) -> Result<Uuid, ()> {
+        let query = sqlx::query_scalar!(
+            "INSERT INTO item (budget_id, category, name, amount) VALUES ($1, $2, $3, $4) RETURNING id",
+            budget_id,
+            payload.category,
+            payload.name,
+            payload.amount
+        );
+
+        match query.fetch_one(self.db_pool.as_ref()).await {
+            Ok(id) => Ok(id),
+            Err(err) => {
+                println!("Error adding item to budget: {err:?}");
+                Err(())
+            }
+        }
+    }
+
+    /// Delete an item.
+    pub async fn delete_item(&self, _budget_id: Uuid, item_id: Uuid) -> Result<(), ()> {
+        let query = sqlx::query!("DELETE FROM item WHERE id = $1", item_id);
+
+        match query.execute(self.db_pool.as_ref()).await {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                println!("Error: {err:?}");
+                Err(())
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[sqlx::test(fixtures("budget_with_items"))]
+    async fn get_item_with_an_id(pool: PgPool) -> sqlx::Result<()> {
+        // Arrange
+        let repo = ItemRepository::new(Arc::new(pool));
+        let id = Uuid::parse_str("d831821b-1b50-41fc-a01e-19a1243c334a").unwrap();
+
+        // Act
+        let item = repo.get_item(id).await.unwrap();
+
+        // Assert
+        assert_eq!(item.category, "Food");
+        assert_eq!(item.name, "Restaurants");
+        assert_eq!(item.amount, 10);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("budget_with_items"))]
+    async fn add_a_new_item_to_a_budget(pool: PgPool) -> sqlx::Result<()> {
+        // Arrange
+        let repo = ItemRepository::new(Arc::new(pool));
+        let budget_id = Uuid::parse_str("b8d6ff4e-c12f-416b-a611-8ad0c90669fe").unwrap();
+
+        let request = dto::AddItemToBudgetRequest::new(
+            "Some category".to_string(),
+            "Some name".to_string(),
+            123,
+        );
+
+        // Act
+        let item_id = repo
+            .add_item_to_budget(budget_id, request.clone())
+            .await
+            .unwrap();
+
+        // Assert
+        // Get the item that was just created
+        let item = repo.get_item(item_id).await.unwrap();
+        assert_eq!(item.category, request.category);
+        assert_eq!(item.name, request.name);
+        assert_eq!(item.amount, request.amount);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("budget_with_items"))]
+    async fn delete_an_item(pool: PgPool) -> sqlx::Result<()> {
+        // Arrange
+        let repo = ItemRepository::new(Arc::new(pool));
+        let item_id = Uuid::parse_str("d831821b-1b50-41fc-a01e-19a1243c334a").unwrap();
+
+        // Act
+        assert!(repo.delete_item(Uuid::new_v4(), item_id).await.is_ok());
+
+        // Assert
+        assert_eq!(repo.get_item(item_id).await, None);
+
+        Ok(())
+    }
+}

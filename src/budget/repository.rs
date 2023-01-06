@@ -5,6 +5,8 @@ use uuid::Uuid;
 
 use super::model;
 
+/// Repository to access budgets.
+/// Used to abstract away the DB interation for the rest of the application.
 pub struct BudgetRepository {
     db_pool: Arc<PgPool>,
 }
