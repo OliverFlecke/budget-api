@@ -62,6 +62,29 @@ impl ItemRepository {
             }
         }
     }
+
+    /// Update an item. Can be provided with a new name, category, or amount.
+    pub async fn update_item(
+        &self,
+        item_id: Uuid,
+        request: dto::AddItemToBudgetRequest,
+    ) -> Result<(), ()> {
+        let query = sqlx::query!(
+            "UPDATE item SET category = $1, amount = $2, name = $3 WHERE id = $4",
+            request.category,
+            request.amount,
+            request.name,
+            item_id
+        );
+
+        match query.execute(self.db_pool.as_ref()).await {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                println!("Error: {err:?}");
+                Err(())
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -127,4 +150,28 @@ mod test {
 
         Ok(())
     }
+
+    #[sqlx::test(fixtures("budget_with_items"))]
+    async fn update_item_with_new_fields(pool: PgPool) -> sqlx::Result<()> {
+        // Arrange
+        let repo = ItemRepository::new(Arc::new(pool));
+        let id = Uuid::parse_str("d831821b-1b50-41fc-a01e-19a1243c334a").unwrap();
+        let request = dto::AddItemToBudgetRequest::new(
+            "Updated category".to_string(),
+            "Updated name".to_string(),
+            999,
+        );
+
+        // Act
+        assert!(repo.update_item(id, request.clone()).await.is_ok());
+
+        // Assert
+        let item = repo.get_item(id).await.unwrap();
+        assert_eq!(item.category, request.category);
+        assert_eq!(item.name, request.name);
+        assert_eq!(item.amount, request.amount);
+
+        Ok(())
+    }
+
 }
