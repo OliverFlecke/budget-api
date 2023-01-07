@@ -1,7 +1,7 @@
 mod dto;
+mod item_repository;
 mod model;
 mod repository;
-mod item_repository;
 
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ use axum::{
 };
 use sqlx::PgPool;
 
-use self::{repository::BudgetRepository, item_repository::ItemRepository};
+use self::{item_repository::ItemRepository, repository::BudgetRepository};
 
 pub fn budget_router(pool: &Arc<PgPool>) -> Router {
     let budget_repository = Arc::new(BudgetRepository::new(pool.clone()));
@@ -19,11 +19,11 @@ pub fn budget_router(pool: &Arc<PgPool>) -> Router {
 
     let item_router = Router::new()
         .route("/", post(endpoints::add_item_to_budget))
-        .with_state(pool.clone())
+        .with_state(item_repository.clone())
         .route("/:item_id", put(endpoints::update_item))
-        .with_state(pool.clone())
+        .with_state(item_repository.clone())
         .route("/:item_id", delete(endpoints::delete_item))
-        .with_state(pool.clone());
+        .with_state(item_repository);
 
     Router::new()
         .route("/", get(endpoints::get_all_budgets))
@@ -31,7 +31,7 @@ pub fn budget_router(pool: &Arc<PgPool>) -> Router {
         .route("/", post(endpoints::create_budget))
         .with_state(budget_repository.clone())
         .route("/:id", get(endpoints::get_budget))
-        .with_state(budget_repository.clone())
+        .with_state(budget_repository)
         .nest("/:id/item", item_router)
 }
 
@@ -44,12 +44,13 @@ mod endpoints {
         http::StatusCode,
         Json,
     };
-    use sqlx::PgPool;
     use uuid::Uuid;
 
     use crate::{auth::ExtractUserId, budget::dto};
 
-    use super::{dto::AddItemToBudgetRequest, repository::BudgetRepository};
+    use super::{
+        dto::AddItemToBudgetRequest, item_repository::ItemRepository, repository::BudgetRepository,
+    };
 
     /// Create a new budget.
     pub async fn create_budget(
@@ -99,41 +100,25 @@ mod endpoints {
 
     /// Add a new item to a budget.
     pub async fn add_item_to_budget(
-        State(pool): State<Arc<PgPool>>,
+        State(repository): State<Arc<ItemRepository>>,
         Path(budget_id): Path<Uuid>,
         Json(payload): Json<AddItemToBudgetRequest>,
-    ) -> StatusCode {
-        let query = sqlx::query!(
-            "INSERT INTO item (budget_id, category, name, amount) VALUES ($1, $2, $3, $4)",
-            budget_id,
-            payload.category,
-            payload.name,
-            payload.amount
-        );
-
-        match query.execute(pool.as_ref()).await {
-            Ok(_) => StatusCode::ACCEPTED,
-            Err(_) => StatusCode::BAD_REQUEST,
+    ) -> Result<Json<Uuid>, StatusCode> {
+        match repository.add_item_to_budget(budget_id, payload).await {
+            Ok(id) => Ok(Json(id)),
+            Err(_) => Err(StatusCode::BAD_REQUEST),
         }
     }
 
     /// Update an item on a budget
     pub async fn update_item(
-        State(pool): State<Arc<PgPool>>,
+        State(repository): State<Arc<ItemRepository>>,
         Path((_budget_id, item_id)): Path<(Uuid, Uuid)>,
         Json(payload): Json<AddItemToBudgetRequest>,
     ) -> StatusCode {
         // TODO: Validate user has access to budget (necessary for more than just this endpoint)
 
-        let query = sqlx::query!(
-            "UPDATE item SET category = $1, amount = $2, name = $3 WHERE id = $4",
-            payload.category,
-            payload.amount,
-            payload.name,
-            item_id
-        );
-
-        match query.execute(pool.as_ref()).await {
+        match repository.update_item(item_id, payload).await {
             Ok(_) => StatusCode::ACCEPTED,
             Err(_) => StatusCode::BAD_REQUEST,
         }
@@ -141,12 +126,10 @@ mod endpoints {
 
     /// Delete an item.
     pub async fn delete_item(
-        State(pool): State<Arc<PgPool>>,
-        Path((_, item_id)): Path<(Uuid, Uuid)>,
+        State(repository): State<Arc<ItemRepository>>,
+        Path((budget_id, item_id)): Path<(Uuid, Uuid)>,
     ) -> StatusCode {
-        let query = sqlx::query!("DELETE FROM item WHERE id = $1", item_id);
-
-        match query.execute(pool.as_ref()).await {
+        match repository.delete_item(budget_id, item_id).await {
             Ok(_) => StatusCode::ACCEPTED,
             Err(_) => StatusCode::BAD_REQUEST,
         }
