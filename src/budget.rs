@@ -57,13 +57,13 @@ mod endpoints {
         State(repository): State<Arc<BudgetRepository>>,
         ExtractUserId(user_id): ExtractUserId,
         Json(payload): Json<dto::CreateBudget>,
-    ) -> StatusCode {
+    ) -> Result<String, StatusCode> {
         match repository
             .create_budget(user_id.as_str(), &payload.title)
             .await
         {
-            Ok(_) => StatusCode::OK,
-            Err(_) => StatusCode::BAD_REQUEST,
+            Ok(id) => Ok(id.to_string()),
+            Err(_) => Err(StatusCode::BAD_REQUEST),
         }
     }
 
@@ -103,9 +103,9 @@ mod endpoints {
         State(repository): State<Arc<ItemRepository>>,
         Path(budget_id): Path<Uuid>,
         Json(payload): Json<AddItemToBudgetRequest>,
-    ) -> Result<Json<Uuid>, StatusCode> {
+    ) -> Result<String, StatusCode> {
         match repository.add_item_to_budget(budget_id, payload).await {
-            Ok(id) => Ok(Json(id)),
+            Ok(id) => Ok(id.to_string()),
             Err(_) => Err(StatusCode::BAD_REQUEST),
         }
     }
