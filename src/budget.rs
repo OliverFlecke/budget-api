@@ -1,5 +1,7 @@
 mod dto;
+mod item_repository;
 mod model;
+mod repository;
 
 use std::sync::Arc;
 
@@ -9,22 +11,27 @@ use axum::{
 };
 use sqlx::PgPool;
 
+use self::{item_repository::ItemRepository, repository::BudgetRepository};
+
 pub fn budget_router(pool: &Arc<PgPool>) -> Router {
+    let budget_repository = Arc::new(BudgetRepository::new(pool.clone()));
+    let item_repository = Arc::new(ItemRepository::new(pool.clone()));
+
     let item_router = Router::new()
         .route("/", post(endpoints::add_item_to_budget))
-        .with_state(pool.clone())
+        .with_state(item_repository.clone())
         .route("/:item_id", put(endpoints::update_item))
-        .with_state(pool.clone())
+        .with_state(item_repository.clone())
         .route("/:item_id", delete(endpoints::delete_item))
-        .with_state(pool.clone());
+        .with_state(item_repository);
 
     Router::new()
         .route("/", get(endpoints::get_all_budgets))
-        .with_state(pool.clone())
+        .with_state(budget_repository.clone())
         .route("/", post(endpoints::create_budget))
-        .with_state(pool.clone())
+        .with_state(budget_repository.clone())
         .route("/:id", get(endpoints::get_budget))
-        .with_state(pool.clone())
+        .with_state(budget_repository)
         .nest("/:id/item", item_router)
 }
 
@@ -37,43 +44,40 @@ mod endpoints {
         http::StatusCode,
         Json,
     };
-    use sqlx::PgPool;
     use uuid::Uuid;
 
-    use crate::{
-        auth::ExtractUserId,
-        budget::{dto, model},
+    use crate::{auth::ExtractUserId, budget::dto};
+
+    use super::{
+        dto::AddItemToBudgetRequest, item_repository::ItemRepository, repository::BudgetRepository,
     };
 
-    use super::dto::AddItemToBudgetRequest;
+    /// Create a new budget.
+    pub async fn create_budget(
+        State(repository): State<Arc<BudgetRepository>>,
+        ExtractUserId(user_id): ExtractUserId,
+        Json(payload): Json<dto::CreateBudget>,
+    ) -> Result<String, StatusCode> {
+        match repository
+            .create_budget(user_id.as_str(), &payload.title)
+            .await
+        {
+            Ok(id) => Ok(id.to_string()),
+            Err(_) => Err(StatusCode::BAD_REQUEST),
+        }
+    }
 
     /// Get a budget from a given ID.
     pub async fn get_budget(
-        State(pool): State<Arc<PgPool>>,
+        State(repository): State<Arc<BudgetRepository>>,
         Path(budget_id): Path<Uuid>,
         ExtractUserId(user_id): ExtractUserId,
     ) -> Result<Json<dto::BudgetWithItems>, StatusCode> {
         println!("Get budget {budget_id} and user: {user_id}");
 
-        let query = sqlx::query_as!(
-            model::BudgetWithItems,
-            r#"SELECT b.*,
-array_agg((i.id, i.budget_id, i.category, i.name, i.amount, i.created_at, i.modified)) as "items!: Vec<model::Item>"
-FROM budget AS b
-LEFT JOIN item AS i ON b.id = i.budget_id
-WHERE b.id = $1 AND b.user_id = $2
-GROUP BY b.id
-"#,
-            budget_id,
-            user_id
-        );
-
-        match query.fetch_one(pool.as_ref()).await {
-            Ok(budget) => Ok(Json((&budget).into())),
-            Err(err) => {
-                println!("Error: {err:?}");
-                Err(StatusCode::NOT_FOUND)
-            }
+        match repository.get_budget(&user_id, &budget_id).await {
+            Some(budget) => Ok(Json((&budget).into())),
+            None => Err(StatusCode::NOT_FOUND),
         }
     }
 
@@ -81,85 +85,40 @@ GROUP BY b.id
     ///
     /// NOTE: This will not continue to be exposed to end users.
     pub async fn get_all_budgets(
-        State(pool): State<Arc<PgPool>>,
+        State(repository): State<Arc<BudgetRepository>>,
         ExtractUserId(user_id): ExtractUserId,
     ) -> Json<Vec<dto::Budget>> {
-        let query = sqlx::query_as!(
-            model::Budget,
-            "SELECT * FROM budget WHERE user_id = $1",
-            user_id
-        );
-
         Json(
-            query
-                .fetch_all(pool.as_ref())
+            repository
+                .get_all_budgets_for_user(&user_id)
                 .await
-                .unwrap()
                 .iter()
                 .map(|x| x.into())
                 .collect::<Vec<dto::Budget>>(),
         )
     }
 
-    /// Create a new budget.
-    pub async fn create_budget(
-        State(pool): State<Arc<PgPool>>,
-        ExtractUserId(user_id): ExtractUserId,
-        Json(payload): Json<dto::CreateBudget>,
-    ) {
-        sqlx::query!(
-            "INSERT INTO budget (user_id, title) VALUES ($1, $2)",
-            user_id,
-            payload.title
-        )
-        .execute(pool.as_ref())
-        .await
-        .unwrap();
-    }
-
-    // pub async fn get_item(State(pool): State<Arc<PgPool>>, Path(item_id): Path<Uuid>) {
-    //     let query = sqlx::query_as!(model::Item, "SELECT * FROM item WHERE id = $1", item_id);
-
-    //     query.fetch_one(pool.as_ref()).await;
-    // }
-
     /// Add a new item to a budget.
     pub async fn add_item_to_budget(
-        State(pool): State<Arc<PgPool>>,
+        State(repository): State<Arc<ItemRepository>>,
         Path(budget_id): Path<Uuid>,
         Json(payload): Json<AddItemToBudgetRequest>,
-    ) -> StatusCode {
-        let query = sqlx::query!(
-            "INSERT INTO item (budget_id, category, name, amount) VALUES ($1, $2, $3, $4)",
-            budget_id,
-            payload.category,
-            payload.name,
-            payload.amount
-        );
-
-        match query.execute(pool.as_ref()).await {
-            Ok(_) => StatusCode::ACCEPTED,
-            Err(_) => StatusCode::BAD_REQUEST,
+    ) -> Result<String, StatusCode> {
+        match repository.add_item_to_budget(budget_id, payload).await {
+            Ok(id) => Ok(id.to_string()),
+            Err(_) => Err(StatusCode::BAD_REQUEST),
         }
     }
 
     /// Update an item on a budget
     pub async fn update_item(
-        State(pool): State<Arc<PgPool>>,
+        State(repository): State<Arc<ItemRepository>>,
         Path((_budget_id, item_id)): Path<(Uuid, Uuid)>,
         Json(payload): Json<AddItemToBudgetRequest>,
     ) -> StatusCode {
         // TODO: Validate user has access to budget (necessary for more than just this endpoint)
 
-        let query = sqlx::query!(
-            "UPDATE item SET category = $1, amount = $2, name = $3 WHERE id = $4",
-            payload.category,
-            payload.amount,
-            payload.name,
-            item_id
-        );
-
-        match query.execute(pool.as_ref()).await {
+        match repository.update_item(item_id, payload).await {
             Ok(_) => StatusCode::ACCEPTED,
             Err(_) => StatusCode::BAD_REQUEST,
         }
@@ -167,12 +126,10 @@ GROUP BY b.id
 
     /// Delete an item.
     pub async fn delete_item(
-        State(pool): State<Arc<PgPool>>,
-        Path((_, item_id)): Path<(Uuid, Uuid)>,
+        State(repository): State<Arc<ItemRepository>>,
+        Path((budget_id, item_id)): Path<(Uuid, Uuid)>,
     ) -> StatusCode {
-        let query = sqlx::query!("DELETE FROM item WHERE id = $1", item_id);
-
-        match query.execute(pool.as_ref()).await {
+        match repository.delete_item(budget_id, item_id).await {
             Ok(_) => StatusCode::ACCEPTED,
             Err(_) => StatusCode::BAD_REQUEST,
         }

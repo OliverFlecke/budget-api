@@ -32,8 +32,14 @@ cargo run
 
 It requires a Postgres database to run against and persist data.
 See `scripts/start_db.sh` to start Postgres in a Docker container.
-The default connection string is stored in `.env` (the format is specified by `sqlx` to allow it to statically compile queries).
-The connection string must be provided as the environment variable `DATABASE_URL`, which can be done with:
+The default connection string **can** be stored in `.env` (the format is specified by `sqlx` to allow it to statically compile queries), which allows `sqlx` to statically verify queries.
+The file should have the following content (modify if you change the details of the connection string):
+
+```sh
+DATABASE_URL=postgres://postgres:password@localhost:5432/finance
+```
+
+When actually running the server, the connection string must be provided as the environment variable `DATABASE_URL`, which can be done with:
 
 ```sh
 export $(cat .env)
@@ -44,5 +50,3 @@ All migrations are stored as revertable SQL files in the `migrations` directory.
 After installing the tool (see previous link), these can be run with `sqlx migrate run` or `sqlx migrate revert`.
 
 If it is the first time running the application, use `sql database create` to create a database inside of Postgres.
-
-I

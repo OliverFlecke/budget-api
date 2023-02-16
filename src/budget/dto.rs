@@ -76,6 +76,7 @@ impl From<&model::Item> for Item {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(test, derive(derive_new::new))]
 pub struct AddItemToBudgetRequest {
     pub category: String,
     pub name: String,

@@ -15,6 +15,7 @@ CREATE TABLE item (
     modified TIMESTAMP NOT NULL DEFAULT current_timestamp,
 
     CONSTRAINT fk_budget FOREIGN KEY(budget_id) REFERENCES budget(id)
+        ON DELETE CASCADE
 );
 
 CREATE OR REPLACE FUNCTION updated_modified_timestamp()
