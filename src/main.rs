@@ -6,12 +6,23 @@ use axum::{
 };
 use budget_api::budget::budget_router;
 use sqlx::postgres::PgPool;
+use tracing::info;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "budget-api=debug,hyper=info".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
     let url = std::env::var("DATABASE_URL")
         .expect("Missing environment variable 'DATABASE_URL' provided with a connection string");
     let pool = Arc::new(PgPool::connect(&url).await.unwrap());
+    info!("Hello");
 
     let budget_router = budget_router(&pool);
     let app = Router::new()
