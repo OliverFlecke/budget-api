@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use sqlx::PgPool;
+use tracing::{event, Level};
 use uuid::Uuid;
 
 use super::model;
@@ -61,7 +62,7 @@ GROUP BY b.id
         match query.fetch_one(self.db_pool.as_ref()).await {
             Ok(budget) => Some(budget),
             Err(err) => {
-                println!("Error: {err:?}");
+                event!(Level::ERROR, "Error: {err:?}");
                 None
             }
         }
@@ -78,7 +79,7 @@ GROUP BY b.id
         match query.fetch_all(self.db_pool.as_ref()).await {
             Ok(budgets) => budgets,
             Err(err) => {
-                println!("Error: {err:?}");
+                event!(Level::ERROR, "Error: {err:?}");
                 vec![]
             }
         }
@@ -96,7 +97,7 @@ GROUP BY b.id
         match query.execute(self.db_pool.as_ref()).await {
             Ok(_) => Ok(()),
             Err(err) => {
-                println!("Error: {err:?}");
+                event!(Level::ERROR, "Error: {err:?}");
                 Err(())
             }
         }

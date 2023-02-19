@@ -76,7 +76,11 @@ mod endpoints {
         Path(budget_id): Path<Uuid>,
         claims: Claims,
     ) -> Result<Json<dto::BudgetWithItems>, StatusCode> {
-        println!("Get budget {budget_id} and user: {}", claims.user_id());
+        event!(
+            Level::INFO,
+            "Get budget {budget_id} and user: {}",
+            claims.user_id()
+        );
 
         match repository.get_budget(claims.user_id(), &budget_id).await {
             Some(budget) => Ok(Json((&budget).into())),
