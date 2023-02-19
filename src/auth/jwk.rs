@@ -30,7 +30,7 @@ pub struct Jwk {
 impl Jwk {
     /// Get the current JWK to use for decoding tokens.
     pub async fn fetch(auth_server: &str) -> Result<Jwk, Box<dyn Error>> {
-        println!("Fetching jwk from identity host");
+        tracing::event!(tracing::Level::DEBUG, "Fetching jwk from identity host");
 
         let jwks = JwksResponse::fetch(auth_server).await?;
 

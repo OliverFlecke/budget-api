@@ -38,6 +38,7 @@ pub fn budget_router(pool: &Arc<PgPool>) -> Router {
 // Endpoints
 mod endpoints {
     use std::sync::Arc;
+    use tracing::{event, Level};
 
     use axum::{
         extract::{Path, State},
@@ -58,6 +59,8 @@ mod endpoints {
         claims: Claims,
         Json(payload): Json<dto::CreateBudget>,
     ) -> Result<String, StatusCode> {
+        event!(Level::INFO, "Creating budget");
+
         match repository
             .create_budget(claims.user_id(), &payload.title)
             .await
