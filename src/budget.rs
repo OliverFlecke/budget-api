@@ -30,6 +30,8 @@ pub fn budget_router(pool: &Arc<PgPool>) -> Router {
         .with_state(budget_repository.clone())
         .route("/", post(endpoints::create_budget))
         .with_state(budget_repository.clone())
+        .route("/:id", delete(endpoints::delete_budget))
+        .with_state(budget_repository.clone())
         .route("/:id", get(endpoints::get_budget))
         .with_state(budget_repository)
         .nest("/:id/item", item_router)
@@ -66,6 +68,24 @@ mod endpoints {
             .await
         {
             Ok(id) => Ok(id.to_string()),
+            Err(_) => Err(StatusCode::BAD_REQUEST),
+        }
+    }
+
+    /// Delete a budget for a user
+    pub async fn delete_budget(
+        State(repository): State<Arc<BudgetRepository>>,
+        claims: Claims,
+        Path(budget_id): Path<Uuid>,
+    ) -> Result<(), StatusCode> {
+        event!(
+            Level::INFO,
+            "Deleting budget '{budget_id}' for user '{}'",
+            claims.user_id()
+        );
+
+        match repository.delete_budget(claims.user_id(), &budget_id).await {
+            Ok(_) => Ok(()),
             Err(_) => Err(StatusCode::BAD_REQUEST),
         }
     }
