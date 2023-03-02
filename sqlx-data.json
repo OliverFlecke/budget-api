@@ -13,6 +13,74 @@
     },
     "query": "DELETE FROM budget WHERE user_id = $1 AND id = $2"
   },
+  "0a1585a34618152585e4cf39a6b13e0f1f124192e83314a48aa2b6fd7d4f60ba": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "title",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 3,
+          "type_info": "Timestamp"
+        },
+        {
+          "name": "items!: Vec<model::Item>",
+          "ordinal": 4,
+          "type_info": "RecordArray"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        null
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT b.*,\nCASE\n    WHEN count(i) = 0 THEN '{}'\n    ELSE\n        array_agg(\n            (i.id, i.budget_id, i.category, i.name, i.amount, i.created_at, i.modified_at)\n        )\n    END as \"items!: Vec<model::Item>\"\nFROM budget AS b\nLEFT JOIN item AS i ON b.id = i.budget_id\nWHERE b.id = $1 AND b.user_id = $2\nGROUP BY b.id\n"
+  },
+  "196f16b63c0cc5993e8b5af0cbee312abccdf7efb706863585ff2aff9dfe402f": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text",
+          "Text",
+          "Int4"
+        ]
+      }
+    },
+    "query": "INSERT INTO item (budget_id, category, name, amount) VALUES ($1, $2, $3, $4) RETURNING id"
+  },
   "5faaae87035de45d9c43fa9baa3ec1e62cce8377d27cec6a01382cb4ed53f632": {
     "describe": {
       "columns": [],
@@ -39,21 +107,6 @@
       }
     },
     "query": "UPDATE item SET category = $1, amount = $2, name = $3 WHERE id = $4"
-  },
-  "b615c82d97e53c4d38e72624e98f5a7d7ced288e46231fa96dac0211dc26725e": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Uuid",
-          "Text",
-          "Text",
-          "Int4"
-        ]
-      }
-    },
-    "query": "INSERT INTO item (budget_id, category, name, amount) VALUES ($1, $2, $3, $4)"
   },
   "cd06a03ae69a667f6f33270fc60b16f18eb2d1c3df00f5a45bdabdca5191e1d4": {
     "describe": {
@@ -114,7 +167,7 @@
     },
     "query": "INSERT INTO budget (user_id, title) VALUES ($1, $2) RETURNING id"
   },
-  "fe8bdfe27eeb48a35c0a1f13952ae1d659f72915422ec4b2edf353e49c450a30": {
+  "f9d244aac1e9a1bd77c7fad79f4bc1a84c641793058aecc121e3fe7d5df27b6f": {
     "describe": {
       "columns": [
         {
@@ -123,24 +176,34 @@
           "type_info": "Uuid"
         },
         {
-          "name": "user_id",
+          "name": "budget_id",
           "ordinal": 1,
-          "type_info": "Text"
+          "type_info": "Uuid"
         },
         {
-          "name": "title",
+          "name": "category",
           "ordinal": 2,
           "type_info": "Text"
         },
         {
-          "name": "created_at",
+          "name": "name",
           "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "amount",
+          "ordinal": 4,
+          "type_info": "Int4"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 5,
           "type_info": "Timestamp"
         },
         {
-          "name": "items!: Vec<model::Item>",
-          "ordinal": 4,
-          "type_info": "RecordArray"
+          "name": "modified_at",
+          "ordinal": 6,
+          "type_info": "Timestamp"
         }
       ],
       "nullable": [
@@ -148,15 +211,16 @@
         false,
         false,
         false,
-        null
+        false,
+        false,
+        false
       ],
       "parameters": {
         "Left": [
-          "Uuid",
-          "Text"
+          "Uuid"
         ]
       }
     },
-    "query": "SELECT b.*,\nCASE\n    WHEN count(i) = 0 THEN '{}'\n    ELSE\n        array_agg(\n            (i.id, i.budget_id, i.category, i.name, i.amount, i.created_at, i.modified)\n        )\n    END as \"items!: Vec<model::Item>\"\nFROM budget AS b\nLEFT JOIN item AS i ON b.id = i.budget_id\nWHERE b.id = $1 AND b.user_id = $2\nGROUP BY b.id\n"
+    "query": "SELECT * FROM item WHERE id = $1"
   }
 }

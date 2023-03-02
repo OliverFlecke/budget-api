@@ -58,7 +58,7 @@ pub struct Item {
     pub name: String,
     pub amount: i32,
     pub created_at: DateTime<Utc>,
-    pub modified: DateTime<Utc>,
+    pub modified_at: DateTime<Utc>,
 }
 
 impl From<&model::Item> for Item {
@@ -70,7 +70,7 @@ impl From<&model::Item> for Item {
             name: from.name.to_owned(),
             amount: from.amount,
             created_at: DateTime::from_utc(from.created_at, Utc),
-            modified: DateTime::from_utc(from.modified, Utc),
+            modified_at: DateTime::from_utc(from.modified_at, Utc),
         }
     }
 }

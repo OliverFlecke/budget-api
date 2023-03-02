@@ -28,5 +28,5 @@ pub struct Item {
     pub name: String,
     pub amount: i32,
     pub created_at: NaiveDateTime,
-    pub modified: NaiveDateTime,
+    pub modified_at: NaiveDateTime,
 }

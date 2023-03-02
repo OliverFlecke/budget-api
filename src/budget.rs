@@ -30,6 +30,8 @@ pub fn budget_router(pool: &Arc<PgPool>) -> Router {
         .with_state(budget_repository.clone())
         .route("/", post(endpoints::create_budget))
         .with_state(budget_repository.clone())
+        .route("/:id", delete(endpoints::delete_budget))
+        .with_state(budget_repository.clone())
         .route("/:id", get(endpoints::get_budget))
         .with_state(budget_repository)
         .nest("/:id/item", item_router)
@@ -38,6 +40,7 @@ pub fn budget_router(pool: &Arc<PgPool>) -> Router {
 // Endpoints
 mod endpoints {
     use std::sync::Arc;
+    use tracing::{event, Level};
 
     use axum::{
         extract::{Path, State},
@@ -46,7 +49,7 @@ mod endpoints {
     };
     use uuid::Uuid;
 
-    use crate::{auth::ExtractUserId, budget::dto};
+    use crate::{auth::Claims, budget::dto};
 
     use super::{
         dto::AddItemToBudgetRequest, item_repository::ItemRepository, repository::BudgetRepository,
@@ -55,14 +58,34 @@ mod endpoints {
     /// Create a new budget.
     pub async fn create_budget(
         State(repository): State<Arc<BudgetRepository>>,
-        ExtractUserId(user_id): ExtractUserId,
+        claims: Claims,
         Json(payload): Json<dto::CreateBudget>,
     ) -> Result<String, StatusCode> {
+        event!(Level::INFO, "Creating budget");
+
         match repository
-            .create_budget(user_id.as_str(), &payload.title)
+            .create_budget(claims.user_id(), &payload.title)
             .await
         {
             Ok(id) => Ok(id.to_string()),
+            Err(_) => Err(StatusCode::BAD_REQUEST),
+        }
+    }
+
+    /// Delete a budget for a user
+    pub async fn delete_budget(
+        State(repository): State<Arc<BudgetRepository>>,
+        claims: Claims,
+        Path(budget_id): Path<Uuid>,
+    ) -> Result<(), StatusCode> {
+        event!(
+            Level::INFO,
+            "Deleting budget '{budget_id}' for user '{}'",
+            claims.user_id()
+        );
+
+        match repository.delete_budget(claims.user_id(), &budget_id).await {
+            Ok(_) => Ok(()),
             Err(_) => Err(StatusCode::BAD_REQUEST),
         }
     }
@@ -71,11 +94,15 @@ mod endpoints {
     pub async fn get_budget(
         State(repository): State<Arc<BudgetRepository>>,
         Path(budget_id): Path<Uuid>,
-        ExtractUserId(user_id): ExtractUserId,
+        claims: Claims,
     ) -> Result<Json<dto::BudgetWithItems>, StatusCode> {
-        println!("Get budget {budget_id} and user: {user_id}");
+        event!(
+            Level::INFO,
+            "Get budget {budget_id} and user: {}",
+            claims.user_id()
+        );
 
-        match repository.get_budget(&user_id, &budget_id).await {
+        match repository.get_budget(claims.user_id(), &budget_id).await {
             Some(budget) => Ok(Json((&budget).into())),
             None => Err(StatusCode::NOT_FOUND),
         }
@@ -86,11 +113,11 @@ mod endpoints {
     /// NOTE: This will not continue to be exposed to end users.
     pub async fn get_all_budgets(
         State(repository): State<Arc<BudgetRepository>>,
-        ExtractUserId(user_id): ExtractUserId,
+        claims: Claims,
     ) -> Json<Vec<dto::Budget>> {
         Json(
             repository
-                .get_all_budgets_for_user(&user_id)
+                .get_all_budgets_for_user(claims.user_id())
                 .await
                 .iter()
                 .map(|x| x.into())
