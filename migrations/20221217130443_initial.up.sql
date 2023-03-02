@@ -12,7 +12,7 @@ CREATE TABLE item (
     name TEXT NOT NULL,
     amount INT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
-    modified TIMESTAMP NOT NULL DEFAULT current_timestamp,
+    modified_at TIMESTAMP NOT NULL DEFAULT current_timestamp,
 
     CONSTRAINT fk_budget FOREIGN KEY(budget_id) REFERENCES budget(id)
         ON DELETE CASCADE
@@ -21,7 +21,7 @@ CREATE TABLE item (
 CREATE OR REPLACE FUNCTION updated_modified_timestamp()
 RETURNS TRIGGER AS $$
 BEGIN
-   NEW.modified = current_timestamp;
+   NEW.modified_at = current_timestamp;
    RETURN NEW;
 END;
 $$ language 'plpgsql';

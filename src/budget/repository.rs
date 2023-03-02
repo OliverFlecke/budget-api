@@ -47,7 +47,7 @@ CASE
     WHEN count(i) = 0 THEN '{}'
     ELSE
         array_agg(
-            (i.id, i.budget_id, i.category, i.name, i.amount, i.created_at, i.modified)
+            (i.id, i.budget_id, i.category, i.name, i.amount, i.created_at, i.modified_at)
         )
     END as "items!: Vec<model::Item>"
 FROM budget AS b
