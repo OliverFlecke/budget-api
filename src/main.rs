@@ -7,7 +7,7 @@ use axum::{
 use budget_api::budget::budget_router;
 use sqlx::postgres::PgPool;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
-use tracing::Level;
+use tracing::{warn, Level};
 use tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -49,5 +49,6 @@ fn setup_tracing() {
 }
 
 async fn not_found(uri: Uri) -> (StatusCode, String) {
+    warn!("Path not found {uri}");
     (StatusCode::NOT_FOUND, format!("No route for '{uri}'"))
 }
