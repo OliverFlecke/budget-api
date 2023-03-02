@@ -38,9 +38,9 @@ impl Jwk {
     }
 }
 
-impl Into<DecodingKey> for Jwk {
-    fn into(self) -> DecodingKey {
-        DecodingKey::from_rsa_components(self.n(), self.e()).unwrap()
+impl From<Jwk> for DecodingKey {
+    fn from(value: Jwk) -> Self {
+        DecodingKey::from_rsa_components(value.n(), value.e()).unwrap()
     }
 }
 
