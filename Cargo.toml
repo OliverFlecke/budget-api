@@ -6,20 +6,23 @@ edition = "2021"
 [dependencies]
 axum = { version = "0.6.1", features = ["headers"] }
 serde = { version = "1.0.152", features = ["derive"] }
-sqlx = { version = "0.6.2", features = [
-    'runtime-tokio-rustls',
-    'postgres',
-    'offline',
-    'macros',
-    'time',
-    'chrono',
-    'uuid',
+sqlx = { version = "0.6.2", default-features = false, features = [
+  'runtime-tokio-rustls',
+  'postgres',
+  'offline',
+  'macros',
+  'time',
+  'chrono',
+  'uuid',
 ] }
 tokio = { version = "1.23.0", features = ["full"] }
 uuid = { version = "1.2.2", features = ["v4", "fast-rng", "serde"] }
 chrono = { version = "0.4.23", features = ["serde"] }
 jsonwebtoken = { version = "8.2.0" }
-reqwest = { version = "0.11.14", features = ["json"] }
+reqwest = { version = "0.11.14", default-features = false, features = [
+  "rustls-tls",
+  "json",
+] }
 derive-getters = "0.2.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
