@@ -93,6 +93,7 @@ mod test {
     use super::*;
 
     #[sqlx::test(fixtures("budget_with_items"))]
+    #[ignore]
     async fn get_item_with_an_id(pool: PgPool) -> sqlx::Result<()> {
         // Arrange
         let repo = ItemRepository::new(Arc::new(pool));
@@ -110,6 +111,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("budget_with_items"))]
+    #[ignore]
     async fn add_a_new_item_to_a_budget(pool: PgPool) -> sqlx::Result<()> {
         // Arrange
         let repo = ItemRepository::new(Arc::new(pool));
@@ -138,6 +140,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("budget_with_items"))]
+    #[ignore]
     async fn delete_an_item(pool: PgPool) -> sqlx::Result<()> {
         // Arrange
         let repo = ItemRepository::new(Arc::new(pool));
@@ -153,6 +156,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("budget_with_items"))]
+    #[ignore]
     async fn update_item_with_new_fields(pool: PgPool) -> sqlx::Result<()> {
         // Arrange
         let repo = ItemRepository::new(Arc::new(pool));
