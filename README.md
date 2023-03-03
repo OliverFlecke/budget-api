@@ -17,7 +17,7 @@ The API currently have the following features:
 - [x] Delete items from a budget
 - [x] Authorize as a user
   - Note: Currently this is a very simple "authorization" that simply allow you to specify your user id. There is NO actual security in this
-  - [ ] JWT (or similar) authorization
+  - [x] JWT authorization
 
 ## Build
 
@@ -27,6 +27,12 @@ Start the application with:
 ```sh
 cargo run
 ```
+
+## Testing
+
+Test can be run with the stardard `cargo test`.
+
+Note that not all tests are activated by default. As the database layer needs an active database to work (sqlx does not seem to support offline mode yet for tests), these are disabled by default. To run them, you need to have a running database (see below). All tests can then be run with `cargo test --features db_test`.
 
 ## Database
 
