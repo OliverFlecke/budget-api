@@ -3,6 +3,9 @@ name = "budget-api"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+db_test = []
+
 [dependencies]
 axum = { version = "0.6.1", features = ["headers"] }
 serde = { version = "1.0.152", features = ["derive"] }

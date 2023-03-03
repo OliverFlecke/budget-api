@@ -111,7 +111,7 @@ mod test {
     const USER_ID: &str = "Alice";
 
     #[sqlx::test]
-    #[ignore]
+    #[cfg_attr(not(feature = "db_test"), ignore)]
     async fn create_a_new_budget(pool: PgPool) -> sqlx::Result<()> {
         let repo = BudgetRepository::new(Arc::new(pool));
 
@@ -121,7 +121,7 @@ mod test {
     }
 
     #[sqlx::test]
-    #[ignore]
+    #[cfg_attr(not(feature = "db_test"), ignore)]
     async fn get_budget_that_is_not_there(pool: PgPool) -> sqlx::Result<()> {
         let repo = BudgetRepository::new(Arc::new(pool));
         let budget_id = Uuid::new_v4();
@@ -132,7 +132,7 @@ mod test {
     }
 
     #[sqlx::test]
-    #[ignore]
+    #[cfg_attr(not(feature = "db_test"), ignore)]
     async fn get_budget_without_any_items(pool: PgPool) -> sqlx::Result<()> {
         let repo = BudgetRepository::new(Arc::new(pool));
         // Setup data
@@ -151,7 +151,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("budget_with_items"))]
-    #[ignore]
+    #[cfg_attr(not(feature = "db_test"), ignore)]
     async fn get_budget_with_items(pool: PgPool) -> sqlx::Result<()> {
         let repo = BudgetRepository::new(Arc::new(pool));
         let budget_id = Uuid::parse_str("b8d6ff4e-c12f-416b-a611-8ad0c90669fe").unwrap();
@@ -176,7 +176,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("budget_multiple"))]
-    #[ignore]
+    #[cfg_attr(not(feature = "db_test"), ignore)]
     async fn get_all_budgets_for_alice(pool: PgPool) -> sqlx::Result<()> {
         let repo = BudgetRepository::new(Arc::new(pool));
 
@@ -187,7 +187,7 @@ mod test {
     }
 
     #[sqlx::test]
-    #[ignore]
+    #[cfg_attr(not(feature = "db_test"), ignore)]
     async fn delete_budget_for_a_user(pool: PgPool) -> sqlx::Result<()> {
         let repo = BudgetRepository::new(Arc::new(pool));
         // Arrange
@@ -206,7 +206,7 @@ mod test {
     }
 
     #[sqlx::test(fixtures("budget_with_items"))]
-    #[ignore]
+    #[cfg_attr(not(feature = "db_test"), ignore)]
     async fn delete_budget_with_items_for_user(pool: PgPool) -> sqlx::Result<()> {
         let repo = BudgetRepository::new(Arc::new(pool));
         // Arrange
