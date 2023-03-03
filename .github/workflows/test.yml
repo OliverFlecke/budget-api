@@ -16,6 +16,8 @@ jobs:
         image: postgres
         env:
           POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -39,7 +41,7 @@ jobs:
       - name: cargo test --locked
         run: cargo test --locked --all-features --all-targets
         env:
-          DATABASE_URL: postgres://postgres:password@postgres:5432/postgres
+          DATABASE_URL: postgres://postgres:password@localhost:5432/postgres
         # uses: actions-rs/cargo@v1
         # with:
         #   command: test
