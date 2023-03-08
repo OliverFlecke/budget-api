@@ -129,6 +129,7 @@ mod endpoints {
     pub async fn add_item_to_budget(
         State(repository): State<Arc<ItemRepository>>,
         Path(budget_id): Path<Uuid>,
+        _claims: Claims,
         Json(payload): Json<AddItemToBudgetRequest>,
     ) -> Result<String, StatusCode> {
         match repository.add_item_to_budget(budget_id, payload).await {
@@ -141,6 +142,7 @@ mod endpoints {
     pub async fn update_item(
         State(repository): State<Arc<ItemRepository>>,
         Path((_budget_id, item_id)): Path<(Uuid, Uuid)>,
+        _claims: Claims,
         Json(payload): Json<AddItemToBudgetRequest>,
     ) -> StatusCode {
         // TODO: Validate user has access to budget (necessary for more than just this endpoint)
@@ -154,6 +156,7 @@ mod endpoints {
     /// Delete an item.
     pub async fn delete_item(
         State(repository): State<Arc<ItemRepository>>,
+        _claims: Claims,
         Path((budget_id, item_id)): Path<(Uuid, Uuid)>,
     ) -> StatusCode {
         match repository.delete_item(budget_id, item_id).await {
