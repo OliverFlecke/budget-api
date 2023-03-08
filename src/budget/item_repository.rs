@@ -52,7 +52,33 @@ impl ItemRepository {
     }
 
     /// Delete an item.
-    pub async fn delete_item(&self, _budget_id: Uuid, item_id: Uuid) -> Result<(), ()> {
+    pub async fn delete_item(
+        &self,
+        user_id: &str,
+        budget_id: Uuid,
+        item_id: Uuid,
+    ) -> Result<(), ()> {
+        // TODO: Can this check be done as part of the insert?
+        let budget = sqlx::query!(
+            r#"SELECT * FROM budget WHERE id = $1 AND user_id = $2"#,
+            budget_id,
+            user_id
+        )
+        .fetch_one(self.db_pool.as_ref())
+        .await;
+
+        match budget {
+            Ok(_) => {}
+            Err(err) => {
+                event!(
+                    Level::WARN,
+                    "User '{user_id}' does not have access to '{budget_id}'. Error: {err:?}"
+                );
+                return Err(());
+            }
+        }
+
+        event!(Level::TRACE, "[item_repository] User '{user_id}' deleting item '{item_id}' from budget '{budget_id}'");
         let query = sqlx::query!("DELETE FROM item WHERE id = $1", item_id);
 
         match query.execute(self.db_pool.as_ref()).await {
@@ -144,13 +170,35 @@ mod test {
     async fn delete_an_item(pool: PgPool) -> sqlx::Result<()> {
         // Arrange
         let repo = ItemRepository::new(Arc::new(pool));
+        let budget_id = Uuid::parse_str("b8d6ff4e-c12f-416b-a611-8ad0c90669fe").unwrap();
         let item_id = Uuid::parse_str("d831821b-1b50-41fc-a01e-19a1243c334a").unwrap();
+        let user_id = "Alice";
 
         // Act
-        assert!(repo.delete_item(Uuid::new_v4(), item_id).await.is_ok());
+        assert!(repo.delete_item(user_id, budget_id, item_id).await.is_ok());
 
         // Assert
         assert_eq!(repo.get_item(item_id).await, None);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("budget_with_items"))]
+    #[cfg_attr(not(feature = "db_test"), ignore)]
+    async fn try_delete_an_item_for_another_user(pool: PgPool) -> sqlx::Result<()> {
+        // "Bob" is trying to delete an item from "Alice"'s budget
+
+        // Arrange
+        let repo = ItemRepository::new(Arc::new(pool));
+        let budget_id = Uuid::parse_str("b8d6ff4e-c12f-416b-a611-8ad0c90669fe").unwrap();
+        let item_id = Uuid::parse_str("d831821b-1b50-41fc-a01e-19a1243c334a").unwrap();
+        let user_id = "Bob";
+
+        // Act
+        assert!(repo.delete_item(user_id, budget_id, item_id).await.is_err());
+
+        // Assert
+        assert_ne!(repo.get_item(item_id).await, None);
 
         Ok(())
     }

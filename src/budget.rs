@@ -177,7 +177,10 @@ mod endpoints {
             claims.user_id()
         );
 
-        match repository.delete_item(budget_id, item_id).await {
+        match repository
+            .delete_item(claims.user_id(), budget_id, item_id)
+            .await
+        {
             Ok(_) => StatusCode::ACCEPTED,
             Err(_) => StatusCode::BAD_REQUEST,
         }
