@@ -28,8 +28,10 @@ async fn main() {
         )
         .fallback(not_found);
 
-    // run it with hyper on localhost:3000
-    let host = "0.0.0.0:4000".parse().unwrap();
+    let port = std::env::var("PORT")
+        .map(|p| p.parse::<usize>().expect("PORT is not a valid integer"))
+        .unwrap_or(4000);
+    let host = format!("0.0.0.0:{port}").parse().unwrap();
 
     tracing::event!(Level::INFO, "Server running at {host}");
     axum::Server::bind(&host)
