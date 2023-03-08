@@ -115,6 +115,8 @@ mod endpoints {
         State(repository): State<Arc<BudgetRepository>>,
         claims: Claims,
     ) -> Json<Vec<dto::Budget>> {
+        event!(Level::INFO, "Get all budgets for user {}", claims.user_id());
+
         Json(
             repository
                 .get_all_budgets_for_user(claims.user_id())
@@ -129,9 +131,14 @@ mod endpoints {
     pub async fn add_item_to_budget(
         State(repository): State<Arc<ItemRepository>>,
         Path(budget_id): Path<Uuid>,
-        _claims: Claims,
+        claims: Claims,
         Json(payload): Json<AddItemToBudgetRequest>,
     ) -> Result<String, StatusCode> {
+        event!(
+            Level::INFO,
+            "User '{}' add item to budget {budget_id}. Payload: {payload:?}",
+            claims.user_id()
+        );
         match repository.add_item_to_budget(budget_id, payload).await {
             Ok(id) => Ok(id.to_string()),
             Err(_) => Err(StatusCode::BAD_REQUEST),
@@ -141,10 +148,15 @@ mod endpoints {
     /// Update an item on a budget
     pub async fn update_item(
         State(repository): State<Arc<ItemRepository>>,
-        Path((_budget_id, item_id)): Path<(Uuid, Uuid)>,
-        _claims: Claims,
+        Path((budget_id, item_id)): Path<(Uuid, Uuid)>,
+        claims: Claims,
         Json(payload): Json<AddItemToBudgetRequest>,
     ) -> StatusCode {
+        event!(
+            Level::INFO,
+            "User '{}' update item {item_id} on budget {budget_id}. Payload: {payload:?}",
+            claims.user_id()
+        );
         // TODO: Validate user has access to budget (necessary for more than just this endpoint)
 
         match repository.update_item(item_id, payload).await {
@@ -156,9 +168,15 @@ mod endpoints {
     /// Delete an item.
     pub async fn delete_item(
         State(repository): State<Arc<ItemRepository>>,
-        _claims: Claims,
+        claims: Claims,
         Path((budget_id, item_id)): Path<(Uuid, Uuid)>,
     ) -> StatusCode {
+        event!(
+            Level::INFO,
+            "User '{}' delete item {item_id} on budget {budget_id}",
+            claims.user_id()
+        );
+
         match repository.delete_item(budget_id, item_id).await {
             Ok(_) => StatusCode::ACCEPTED,
             Err(_) => StatusCode::BAD_REQUEST,
