@@ -58,31 +58,27 @@ impl ItemRepository {
         budget_id: Uuid,
         item_id: Uuid,
     ) -> Result<(), ()> {
-        // TODO: Can this check be done as part of the insert?
-        let budget = sqlx::query!(
-            r#"SELECT * FROM budget WHERE id = $1 AND user_id = $2"#,
+        event!(Level::TRACE, "[item_repository] User '{user_id}' deleting item '{item_id}' from budget '{budget_id}'");
+        let query = sqlx::query!(
+            r#"with deleted as 
+            (delete from item 
+               where id = $1 
+                 and exists(select * from budget where id = $2 and user_id = $3) 
+               returning *)
+            select count(*) from deleted"#,
+            item_id,
             budget_id,
             user_id
-        )
-        .fetch_one(self.db_pool.as_ref())
-        .await;
+        );
 
-        match budget {
-            Ok(_) => {}
-            Err(err) => {
-                event!(
-                    Level::WARN,
-                    "User '{user_id}' does not have access to '{budget_id}'. Error: {err:?}"
-                );
-                return Err(());
-            }
-        }
-
-        event!(Level::TRACE, "[item_repository] User '{user_id}' deleting item '{item_id}' from budget '{budget_id}'");
-        let query = sqlx::query!("DELETE FROM item WHERE id = $1", item_id);
-
-        match query.execute(self.db_pool.as_ref()).await {
-            Ok(_) => Ok(()),
+        match query.fetch_one(self.db_pool.as_ref()).await {
+            Ok(x) => match x.count {
+                Some(1) => Ok(()),
+                _ => {
+                    event!(Level::ERROR, "Item '{item_id}' does not exists");
+                    Err(())
+                }
+            },
             Err(err) => {
                 event!(Level::ERROR, "Error: {err:?}");
                 Err(())
