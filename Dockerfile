@@ -1,7 +1,9 @@
-FROM rust:1.67.1 as build
+FROM rust:1.68.0 as build
 
 RUN USER=root cargo new --bin app
 WORKDIR /app
+
+ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
