@@ -13,6 +13,45 @@
     },
     "query": "DELETE FROM budget WHERE user_id = $1 AND id = $2"
   },
+  "07d22a4da37f9d751209eef662fb9e526b59886f948339862899904c140b7cc5": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "user_id",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "title",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 3,
+          "type_info": "Timestamp"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Text"
+        ]
+      }
+    },
+    "query": "SELECT * FROM budget WHERE id = $1 AND user_id = $2"
+  },
   "0a1585a34618152585e4cf39a6b13e0f1f124192e83314a48aa2b6fd7d4f60ba": {
     "describe": {
       "columns": [
@@ -57,6 +96,63 @@
       }
     },
     "query": "SELECT b.*,\nCASE\n    WHEN count(i) = 0 THEN '{}'\n    ELSE\n        array_agg(\n            (i.id, i.budget_id, i.category, i.name, i.amount, i.created_at, i.modified_at)\n        )\n    END as \"items!: Vec<model::Item>\"\nFROM budget AS b\nLEFT JOIN item AS i ON b.id = i.budget_id\nWHERE b.id = $1 AND b.user_id = $2\nGROUP BY b.id\n"
+  },
+  "0fa3ff739e8788b80726a764920c8348af368e494c5e9334ddaa4f8bf4b6d6ed": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "budget_id",
+          "ordinal": 1,
+          "type_info": "Uuid"
+        },
+        {
+          "name": "category",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "name",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "amount",
+          "ordinal": 4,
+          "type_info": "Int4"
+        },
+        {
+          "name": "created_at",
+          "ordinal": 5,
+          "type_info": "Timestamp"
+        },
+        {
+          "name": "modified_at",
+          "ordinal": 6,
+          "type_info": "Timestamp"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Left": [
+          "Uuid",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "SELECT * FROM item WHERE id = $1 AND budget_id = $2 "
   },
   "196f16b63c0cc5993e8b5af0cbee312abccdf7efb706863585ff2aff9dfe402f": {
     "describe": {
@@ -176,61 +272,5 @@
       }
     },
     "query": "INSERT INTO budget (user_id, title) VALUES ($1, $2) RETURNING id"
-  },
-  "f9d244aac1e9a1bd77c7fad79f4bc1a84c641793058aecc121e3fe7d5df27b6f": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Uuid"
-        },
-        {
-          "name": "budget_id",
-          "ordinal": 1,
-          "type_info": "Uuid"
-        },
-        {
-          "name": "category",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "name",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "amount",
-          "ordinal": 4,
-          "type_info": "Int4"
-        },
-        {
-          "name": "created_at",
-          "ordinal": 5,
-          "type_info": "Timestamp"
-        },
-        {
-          "name": "modified_at",
-          "ordinal": 6,
-          "type_info": "Timestamp"
-        }
-      ],
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "parameters": {
-        "Left": [
-          "Uuid"
-        ]
-      }
-    },
-    "query": "SELECT * FROM item WHERE id = $1"
   }
 }
