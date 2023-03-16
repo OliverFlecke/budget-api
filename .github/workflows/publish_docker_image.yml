@@ -6,6 +6,9 @@ on:
       - main
       - ci/*
 
+env:
+  CONTAINER_REGISTRY: ghcr.io
+
 jobs:
   docker:
     runs-on: ubuntu-latest
@@ -24,7 +27,7 @@ jobs:
         with:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          registry: ghcr.io
+          registry: ${{ env.CONTAINER_REGISTRY }}
 
       - name: Build and push
         uses: docker/build-push-action@v3
@@ -32,8 +35,8 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ghcr.io/${{ env.OWNER_LC }}/budget-api:latest
-            ghcr.io/${{ env.OWNER_LC }}/budget-api:${{ github.sha }}
+            ${{ env.CONTAINER_REGISTRY }}/${{ env.OWNER_LC }}/budget-api:latest
+            ${{ env.CONTAINER_REGISTRY }}/${{ env.OWNER_LC }}/budget-api:${{ github.sha }}
           file: Dockerfile
           secrets: |
             GIT_AUTH_TOKEN=${{ secrets.GITHUB_TOKEN }}
