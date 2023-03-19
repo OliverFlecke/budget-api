@@ -19,6 +19,8 @@ jobs:
         env:
           OWNER: '${{ github.repository_owner }}'
 
+      - uses: actions/checkout@v3
+
       - name: Login to container registry
         uses: redhat-actions/podman-login@v1
         with:
@@ -33,9 +35,7 @@ jobs:
           image: budget-api
           tags: latest ${{ github.sha }}
           platforms: linux/amd64
-          context: ..
-          containerfiles: | 
-            ../Dockerfile
+          containerfiles: Dockerfile
 
       - name: Push image
         id: push-image
