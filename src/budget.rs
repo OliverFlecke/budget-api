@@ -139,7 +139,10 @@ mod endpoints {
             "User '{}' add item to budget {budget_id}. Payload: {payload:?}",
             claims.user_id()
         );
-        match repository.add_item_to_budget(budget_id, payload).await {
+        match repository
+            .add_item_to_budget(claims.user_id(), budget_id, payload)
+            .await
+        {
             Ok(id) => Ok(id.to_string()),
             Err(_) => Err(StatusCode::BAD_REQUEST),
         }
@@ -157,9 +160,11 @@ mod endpoints {
             "User '{}' update item {item_id} on budget {budget_id}. Payload: {payload:?}",
             claims.user_id()
         );
-        // TODO: Validate user has access to budget (necessary for more than just this endpoint)
 
-        match repository.update_item(item_id, payload).await {
+        match repository
+            .update_item(claims.user_id(), budget_id, item_id, payload)
+            .await
+        {
             Ok(_) => StatusCode::ACCEPTED,
             Err(_) => StatusCode::BAD_REQUEST,
         }
