@@ -36,6 +36,7 @@ jobs:
           tags: latest ${{ github.sha }}
           platforms: linux/amd64
           containerfiles: Dockerfile
+          layers: true
 
       - name: Push image
         id: push-image
