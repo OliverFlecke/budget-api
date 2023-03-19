@@ -33,6 +33,7 @@ jobs:
           image: budget-api
           tags: latest ${{ github.sha }}
           platforms: linux/amd64
+          context: ..
           containerfiles: | 
             Dockerfile
 
