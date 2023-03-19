@@ -10,7 +10,8 @@ env:
   CONTAINER_REGISTRY: ghcr.io
 
 jobs:
-  docker:
+  build-and-publish-image:
+    name: Build and publish image
     runs-on: ubuntu-latest
     steps:
       - name: Set lower case owner name
@@ -33,7 +34,7 @@ jobs:
           tags: latest ${{ github.sha }}
           platforms: linux/amd64
           containerfiles: | 
-            ./Dockerfile
+            Dockerfile
 
       - name: Push image
         id: push-image
