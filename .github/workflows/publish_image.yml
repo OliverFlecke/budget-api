@@ -35,7 +35,7 @@ jobs:
           platforms: linux/amd64
           context: ..
           containerfiles: | 
-            Dockerfile
+            ../Dockerfile
 
       - name: Push image
         id: push-image
