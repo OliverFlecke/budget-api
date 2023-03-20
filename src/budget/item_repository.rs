@@ -15,6 +15,7 @@ pub enum ItemRepositoryError {
 
 /// Repository to access items.
 /// Abstracts away the DB interations for items.
+#[derive(Debug)]
 pub struct ItemRepository {
     db_pool: Arc<PgPool>,
 }

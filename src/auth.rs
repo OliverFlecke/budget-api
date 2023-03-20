@@ -1,5 +1,5 @@
 pub mod config;
-mod jwk;
+pub mod jwk;
 
 use std::collections::HashSet;
 

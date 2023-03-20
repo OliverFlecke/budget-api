@@ -1,25 +1,32 @@
-use std::sync::Arc;
+use std::error::Error;
 
 use axum::{
     http::{StatusCode, Uri},
     Router,
 };
-use budget_api::budget::budget_router;
-use sqlx::postgres::PgPool;
+use budget_api::{app_state::AppState, budget::create_budget_router};
+
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
-use tracing::{warn, Level};
+use tracing::{info, trace, warn, Level};
 use tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
-async fn main() {
-    let url = std::env::var("DATABASE_URL")
-        .expect("Missing environment variable 'DATABASE_URL' provided with a connection string");
-    let pool = Arc::new(PgPool::connect(&url).await.unwrap());
-
+async fn main() -> Result<(), Box<dyn Error>> {
+    // Initialize services
     setup_tracing();
-    let budget_router = budget_router(&pool);
+    trace!("Initialize services");
+
+    let port = std::env::var("PORT")
+        .map(|p| p.parse::<usize>().expect("PORT is not a valid integer"))
+        .unwrap_or(4000);
+    let host = format!("0.0.0.0:{port}").parse().unwrap();
+
+    let app_state = AppState::initialize().await?;
+
+    // Build app
+    trace!("Building app");
     let app = Router::new()
-        .nest("/budget", budget_router)
+        .nest("/budget", create_budget_router(app_state))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
@@ -28,16 +35,14 @@ async fn main() {
         )
         .fallback(not_found);
 
-    let port = std::env::var("PORT")
-        .map(|p| p.parse::<usize>().expect("PORT is not a valid integer"))
-        .unwrap_or(4000);
-    let host = format!("0.0.0.0:{port}").parse().unwrap();
-
-    tracing::event!(Level::INFO, "Server running at {host}");
+    // Run app
+    info!("Server running at {host}");
     axum::Server::bind(&host)
         .serve(app.into_make_service())
         .await
         .unwrap();
+
+    Ok(())
 }
 
 fn setup_tracing() {

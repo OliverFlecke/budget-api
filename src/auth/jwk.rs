@@ -46,7 +46,7 @@ impl From<Jwk> for DecodingKey {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JwkRepository {
     auth_config: AuthConfig,
     keys: Vec<Jwk>,

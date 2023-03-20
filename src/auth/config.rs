@@ -4,7 +4,7 @@ use jsonwebtoken::{Algorithm, Validation};
 pub(crate) static ISSUER: &str = "https://oliverflecke.eu.auth0.com/";
 pub(crate) static AUDIENCE: &str = "https://finance.oliverflecke.me/";
 
-#[derive(Debug, Getters)]
+#[derive(Debug, Getters, Clone)]
 pub struct AuthConfig {
     issuer: String,
     audience: String,
