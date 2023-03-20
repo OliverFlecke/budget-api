@@ -4,6 +4,8 @@ use derive_getters::Getters;
 use jsonwebtoken::DecodingKey;
 use serde::Deserialize;
 
+use super::config::AuthConfig;
+
 static JWKS_ENDPOINT: &str = ".well-known/jwks.json";
 
 #[derive(Debug, Deserialize)]
@@ -21,7 +23,7 @@ impl JwksResponse {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Getters)]
+#[derive(Debug, Clone, Deserialize, Getters, PartialEq, Eq)]
 pub struct Jwk {
     n: String,
     e: String,
@@ -44,6 +46,54 @@ impl From<Jwk> for DecodingKey {
     }
 }
 
+#[derive(Debug)]
+pub struct JwkRepository {
+    auth_config: AuthConfig,
+    keys: Vec<Jwk>,
+}
+
+impl From<AuthConfig> for JwkRepository {
+    fn from(auth_config: AuthConfig) -> Self {
+        Self {
+            auth_config,
+            keys: vec![],
+        }
+    }
+}
+
+impl JwkRepository {
+    pub async fn new(auth_config: AuthConfig) -> Result<Self, Box<dyn Error>> {
+        let jwks = JwksResponse::fetch(auth_config.issuer()).await?;
+
+        Ok(Self {
+            auth_config,
+            keys: jwks.keys,
+        })
+    }
+
+    /// Get the current JWK to use.
+    pub fn get_key(&self) -> Option<Jwk> {
+        self.keys.first().cloned()
+    }
+
+    /// Refresh JWKs and returns the current one.
+    pub async fn get_key_with_refresh(&mut self) -> Result<Jwk, Box<dyn Error>> {
+        // TODO: Should be update at a certain frequency.
+        if self.keys.is_empty() {
+            self.update_keys().await?;
+        }
+
+        Ok(self.get_key().expect("a key to have been fetched"))
+    }
+
+    /// Updates the internal, local storage of the JWKs.
+    async fn update_keys(&mut self) -> Result<(), Box<dyn Error>> {
+        self.keys = JwksResponse::fetch(self.auth_config.issuer()).await?.keys;
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::auth::config::AuthConfig;
@@ -57,5 +107,22 @@ mod test {
 
         assert_eq!(jwk.e, "AQAB");
         assert_ne!(jwk.n, ""); // Don't want to test the exact value of the key here, so it's enough to just verify that its not empty.
+    }
+
+    #[tokio::test]
+    async fn repository_update_keys() {
+        let mut repository = JwkRepository::from(AuthConfig::default());
+
+        repository.update_keys().await.expect("update to work");
+        assert_ne!(repository.get_key(), None);
+    }
+
+    #[tokio::test]
+    async fn repository_fetch_on_create() {
+        let repository = JwkRepository::new(AuthConfig::default())
+            .await
+            .expect("to be able to create the repository");
+
+        assert_ne!(repository.get_key(), None);
     }
 }
