@@ -4,10 +4,19 @@ use jsonwebtoken::{Algorithm, Validation};
 pub(crate) static ISSUER: &str = "https://oliverflecke.eu.auth0.com/";
 pub(crate) static AUDIENCE: &str = "https://finance.oliverflecke.me/";
 
-#[derive(Debug, Getters)]
+#[derive(Debug, Getters, Clone)]
 pub struct AuthConfig {
     issuer: String,
     audience: String,
+}
+
+impl AuthConfig {
+    pub fn from_env() -> Self {
+        Self {
+            issuer: std::env::var("ISSUER").expect("variable 'ISSUER' to be set"),
+            audience: std::env::var("AUDIENCE").expect("variable 'AUDIENCE' to be set"),
+        }
+    }
 }
 
 impl Default for AuthConfig {

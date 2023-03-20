@@ -1,43 +1,32 @@
 mod dto;
-mod item_repository;
+pub(crate) mod item_repository;
 mod model;
-mod repository;
-
-use std::sync::Arc;
+pub(crate) mod repository;
 
 use axum::{
     routing::{delete, get, post, put},
     Router,
 };
-use sqlx::PgPool;
 
-use self::{item_repository::ItemRepository, repository::BudgetRepository};
+use crate::app_state::AppState;
 
-pub fn budget_router(pool: &Arc<PgPool>) -> Router {
-    let budget_repository = Arc::new(BudgetRepository::new(pool.clone()));
-    let item_repository = Arc::new(ItemRepository::new(pool.clone()));
-
-    let item_router = Router::new()
-        .route("/", post(endpoints::add_item_to_budget))
-        .with_state(item_repository.clone())
-        .route("/:item_id", put(endpoints::update_item))
-        .with_state(item_repository.clone())
-        .route("/:item_id", delete(endpoints::delete_item))
-        .with_state(item_repository);
-
+pub fn create_budget_router(state: AppState) -> Router {
     Router::new()
         .route("/", get(endpoints::get_all_budgets))
-        .with_state(budget_repository.clone())
         .route("/", post(endpoints::create_budget))
-        .with_state(budget_repository.clone())
         .route("/:id", delete(endpoints::delete_budget))
-        .with_state(budget_repository.clone())
         .route("/:id", get(endpoints::get_budget))
-        .with_state(budget_repository)
-        .nest("/:id/item", item_router)
+        .with_state(state.clone())
+        .nest(
+            "/:id/item",
+            Router::new()
+                .route("/", post(endpoints::add_item_to_budget))
+                .route("/:item_id", put(endpoints::update_item))
+                .route("/:item_id", delete(endpoints::delete_item))
+                .with_state(state),
+        )
 }
 
-// Endpoints
 mod endpoints {
     use std::sync::Arc;
     use tracing::{event, Level};
