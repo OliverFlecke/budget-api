@@ -1,6 +1,7 @@
 use std::{error::Error, sync::Arc};
 
 use axum::extract::FromRef;
+use derive_getters::Getters;
 use duplicate::duplicate_item;
 use sqlx::PgPool;
 use tracing::trace;
@@ -12,7 +13,7 @@ use crate::{
 
 /// Represents the global app state for Axum.
 /// Can also be considered as the DoI container for the application.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Getters)]
 pub struct AppState {
     jwks_repository: Arc<JwkRepository>,
     budget_repository: Arc<BudgetRepository>,

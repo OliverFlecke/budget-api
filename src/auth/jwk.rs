@@ -3,6 +3,7 @@ use std::error::Error;
 use derive_getters::Getters;
 use jsonwebtoken::DecodingKey;
 use serde::Deserialize;
+use tracing::trace;
 
 use super::config::AuthConfig;
 
@@ -29,23 +30,14 @@ pub struct Jwk {
     e: String,
 }
 
-impl Jwk {
-    /// Get the current JWK to use for decoding tokens.
-    pub async fn fetch(auth_server: &str) -> Result<Jwk, Box<dyn Error>> {
-        tracing::event!(tracing::Level::DEBUG, "Fetching jwk from identity host");
-
-        let jwks = JwksResponse::fetch(auth_server).await?;
-
-        Ok(jwks.keys.first().unwrap().clone())
-    }
-}
-
 impl From<Jwk> for DecodingKey {
     fn from(value: Jwk) -> Self {
         DecodingKey::from_rsa_components(value.n(), value.e()).unwrap()
     }
 }
 
+/// Represents a repository for storing and managing JWKs locally.
+/// This includes fetching them from a remote authority and updating them reguarly.
 #[derive(Debug, Clone)]
 pub struct JwkRepository {
     auth_config: AuthConfig,
@@ -71,6 +63,11 @@ impl JwkRepository {
         })
     }
 
+    /// Get the configuration of the authority that JWKs are fetched from.
+    pub fn get_auth_config(&self) -> &AuthConfig {
+        &self.auth_config
+    }
+
     /// Get the current JWK to use.
     pub fn get_key(&self) -> Option<Jwk> {
         self.keys.first().cloned()
@@ -88,6 +85,7 @@ impl JwkRepository {
 
     /// Updates the internal, local storage of the JWKs.
     async fn update_keys(&mut self) -> Result<(), Box<dyn Error>> {
+        trace!("Fetching jwk from identity host");
         self.keys = JwksResponse::fetch(self.auth_config.issuer()).await?.keys;
 
         Ok(())
@@ -101,20 +99,14 @@ mod test {
     use super::*;
 
     #[tokio::test]
-    async fn fetch_jwk_from_auth0() {
-        let config = AuthConfig::default();
-        let jwk = Jwk::fetch(config.issuer()).await.unwrap();
-
-        assert_eq!(jwk.e, "AQAB");
-        assert_ne!(jwk.n, ""); // Don't want to test the exact value of the key here, so it's enough to just verify that its not empty.
-    }
-
-    #[tokio::test]
     async fn repository_update_keys() {
         let mut repository = JwkRepository::from(AuthConfig::default());
 
         repository.update_keys().await.expect("update to work");
-        assert_ne!(repository.get_key(), None);
+
+        let jwk = repository.get_key().expect("key to be there");
+        assert_eq!(jwk.e, "AQAB");
+        assert_ne!(jwk.n, ""); // Don't want to test the exact value of the key here, so it's enough to just verify that its not empty.
     }
 
     #[tokio::test]
