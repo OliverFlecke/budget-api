@@ -272,5 +272,19 @@
       }
     },
     "query": "INSERT INTO budget (user_id, title) VALUES ($1, $2) RETURNING id"
+  },
+  "e607945f234e2e6f09c546bcb26cf38a239ab3bc45dd33f79f2f8ffd56387bfe": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Uuid",
+          "Text"
+        ]
+      }
+    },
+    "query": "UPDATE budget SET title = $3 WHERE user_id = $1 AND id = $2"
   }
 }

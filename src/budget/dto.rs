@@ -48,6 +48,11 @@ pub struct CreateBudget {
     pub title: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateBudget {
+    pub title: String,
+}
+
 /// DTO for the basic item that can be returned to the user.
 /// This mirrors the database object closely.
 #[derive(Debug, Clone, Serialize, Deserialize)]
