@@ -16,6 +16,7 @@ pub fn create_budget_router(state: AppState) -> Router {
         .route("/", post(endpoints::create_budget))
         .route("/:id", delete(endpoints::delete_budget))
         .route("/:id", get(endpoints::get_budget))
+        .route("/:id", put(endpoints::update_budget))
         .with_state(state.clone())
         .nest(
             "/:id/item",
@@ -114,6 +115,21 @@ mod endpoints {
                 .map(|x| x.into())
                 .collect::<Vec<dto::Budget>>(),
         )
+    }
+
+    /// Update the name of a budget.
+    pub async fn update_budget(
+        State(repository): State<Arc<BudgetRepository>>,
+        claims: Claims,
+        Path(budget_id): Path<Uuid>,
+        Json(payload): Json<dto::UpdateBudget>,
+    ) -> Result<(), StatusCode> {
+        tracing::info!("Updating budget for user '{}'", claims.user_id());
+
+        repository
+            .update_budget(claims.user_id(), &budget_id, &payload.title)
+            .await
+            .map_err(|_| StatusCode::NOT_FOUND)
     }
 
     /// Add a new item to a budget.

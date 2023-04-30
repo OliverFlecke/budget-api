@@ -86,6 +86,29 @@ GROUP BY b.id
         }
     }
 
+    /// Update the name of a budget.
+    pub async fn update_budget(
+        &self,
+        user_id: &str,
+        budget_id: &Uuid,
+        title: &str,
+    ) -> Result<(), ()> {
+        let query = sqlx::query!(
+            "UPDATE budget SET title = $3 WHERE user_id = $1 AND id = $2",
+            user_id,
+            budget_id,
+            title
+        );
+
+        match query.execute(self.db_pool.as_ref()).await {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                tracing::error!("Unable to update budget title. Error: {err:?}");
+                Err(())
+            }
+        }
+    }
+
     #[allow(dead_code)]
     /// Delete a user's budget.
     pub async fn delete_budget(&self, user_id: &str, budget_id: &Uuid) -> Result<(), ()> {
@@ -218,6 +241,27 @@ mod test {
 
         // Assert
         assert_eq!(repo.get_budget(USER_ID, &budget_id).await, None);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures("budget_with_items"))]
+    #[cfg_attr(not(feature = "db_test"), ignore)]
+    async fn update_budget_title(pool: PgPool) -> sqlx::Result<()> {
+        let repo = BudgetRepository::new(Arc::new(pool));
+        let budget_id = Uuid::parse_str("b8d6ff4e-c12f-416b-a611-8ad0c90669fe").unwrap();
+        let new_title = "New title";
+
+        // Act
+        assert!(repo
+            .update_budget(USER_ID, &budget_id, new_title)
+            .await
+            .is_ok());
+
+        assert_eq!(
+            repo.get_budget(USER_ID, &budget_id).await.unwrap().title,
+            new_title
+        );
 
         Ok(())
     }
