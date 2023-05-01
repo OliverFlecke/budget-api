@@ -32,19 +32,21 @@ mod endpoints {
     use tracing::{event, Level};
 
     use axum::{
+        debug_handler,
         extract::{Path, State},
         http::StatusCode,
         Json,
     };
     use uuid::Uuid;
 
-    use crate::{auth::Claims, budget::dto};
+    use crate::{app_state::AppState, auth::Claims, budget::dto};
 
     use super::{
         dto::AddItemToBudgetRequest, item_repository::ItemRepository, repository::BudgetRepository,
     };
 
     /// Create a new budget.
+    #[debug_handler(state = AppState)]
     pub async fn create_budget(
         State(repository): State<Arc<BudgetRepository>>,
         claims: Claims,
@@ -62,6 +64,7 @@ mod endpoints {
     }
 
     /// Delete a budget for a user
+    #[debug_handler(state = AppState)]
     pub async fn delete_budget(
         State(repository): State<Arc<BudgetRepository>>,
         claims: Claims,
@@ -80,6 +83,7 @@ mod endpoints {
     }
 
     /// Get a budget from a given ID.
+    #[debug_handler(state = AppState)]
     pub async fn get_budget(
         State(repository): State<Arc<BudgetRepository>>,
         Path(budget_id): Path<Uuid>,
@@ -100,6 +104,7 @@ mod endpoints {
     /// Get all budgets in the database.
     ///
     /// NOTE: This will not continue to be exposed to end users.
+    #[debug_handler(state = AppState)]
     pub async fn get_all_budgets(
         State(repository): State<Arc<BudgetRepository>>,
         claims: Claims,
@@ -117,6 +122,7 @@ mod endpoints {
     }
 
     /// Add a new item to a budget.
+    #[debug_handler(state = AppState)]
     pub async fn add_item_to_budget(
         State(repository): State<Arc<ItemRepository>>,
         Path(budget_id): Path<Uuid>,
@@ -138,6 +144,7 @@ mod endpoints {
     }
 
     /// Update an item on a budget
+    #[debug_handler(state = AppState)]
     pub async fn update_item(
         State(repository): State<Arc<ItemRepository>>,
         Path((budget_id, item_id)): Path<(Uuid, Uuid)>,
@@ -160,6 +167,7 @@ mod endpoints {
     }
 
     /// Delete an item.
+    #[debug_handler(state = AppState)]
     pub async fn delete_item(
         State(repository): State<Arc<ItemRepository>>,
         claims: Claims,
