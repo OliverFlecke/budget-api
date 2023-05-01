@@ -7,7 +7,7 @@ edition = "2021"
 db_test = []
 
 [dependencies]
-axum = { version = "0.6.1", features = ["headers"] }
+axum = { version = "0.6.1", features = ["headers", "macros"] }
 serde = { version = "1.0.152", features = ["derive"] }
 sqlx = { version = "0.6.2", default-features = false, features = [
   'runtime-tokio-rustls',
