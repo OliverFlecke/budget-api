@@ -20,7 +20,7 @@ The API currently have the following features:
 
 ## Build
 
-Application is tested with Rust v1.64, but newer will likely work.
+Application is tested with Rust v1.72, but newer versions will likely work.
 Start the application with:
 
 ```sh
