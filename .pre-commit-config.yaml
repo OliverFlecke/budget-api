@@ -1,5 +1,5 @@
 ci:
-  skip: [cargo-check, fmt]
+  skip: [fmt]
 
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
