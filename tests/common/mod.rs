@@ -1,4 +1,4 @@
-use budget_api::App;
+use budget_api::{auth::config::AuthConfig, App};
 use derive_getters::Getters;
 use std::net::TcpListener;
 
@@ -12,6 +12,10 @@ pub async fn spawn_app() -> anyhow::Result<TestApp> {
     let test_app = TestApp {
         address: format!("http://127.0.0.1:{}", listener.local_addr().unwrap().port()),
     };
+
+    let auth_config = AuthConfig::default();
+    std::env::set_var("ISSUER", auth_config.issuer());
+    std::env::set_var("AUDIENCE", auth_config.audience());
 
     let server = App::create()
         .await
