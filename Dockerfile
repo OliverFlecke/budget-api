@@ -20,4 +20,3 @@ FROM debian:buster-slim
 COPY --from=build /app/target/release/budget-api .
 
 CMD ["./budget-api"]
-

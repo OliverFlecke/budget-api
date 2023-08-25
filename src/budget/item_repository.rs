@@ -78,10 +78,10 @@ impl ItemRepository {
     ) -> Result<(), ItemRepositoryError> {
         event!(Level::TRACE, "[item_repository] User '{user_id}' deleting item '{item_id}' from budget '{budget_id}'");
         let query = sqlx::query!(
-            r#"with deleted as 
-            (delete from item 
-               where id = $1 
-                 and exists(select * from budget where id = $2 and user_id = $3) 
+            r#"with deleted as
+            (delete from item
+               where id = $1
+                 and exists(select * from budget where id = $2 and user_id = $3)
                returning *)
             select count(*) from deleted"#,
             item_id,
