@@ -16,7 +16,6 @@ The API currently have the following features:
 - [x] Update items' **name**, **category**, or **amount**
 - [x] Delete items from a budget
 - [x] Authorize as a user
-  - Note: Currently this is a very simple "authorization" that simply allow you to specify your user id. There is NO actual security in this
   - [x] JWT authorization
 
 ## Build
@@ -35,6 +34,8 @@ Test can be run with the stardard `cargo test`.
 Note that not all tests are activated by default. As the database layer needs an active database to work (sqlx does not seem to support offline mode yet for tests), these are disabled by default. To run them, you need to have a running database (see below). All tests can then be run with `cargo test --features db_test`.
 
 ## Database
+
+The easiest way to build/test/run the application is to set the environment variable `SQLX_OFFLINE=true`, which will use the precompiled queries to the database to compile.
 
 It requires a Postgres database to run against and persist data.
 See `scripts/start_db.sh` to start Postgres in a Docker container.
