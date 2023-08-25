@@ -10,7 +10,7 @@ use axum::{
 
 use crate::app_state::AppState;
 
-pub fn create_budget_router(state: AppState) -> Router {
+pub fn create_router(state: AppState) -> Router {
     Router::new()
         .route("/", get(endpoints::get_all_budgets))
         .route("/", post(endpoints::create_budget))
