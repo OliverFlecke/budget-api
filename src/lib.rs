@@ -6,7 +6,6 @@ use axum::{
 };
 use std::net::TcpListener;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
-use tracing::Level;
 use tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt};
 
 pub mod app_state;
@@ -20,6 +19,8 @@ pub struct App {
 }
 
 impl App {
+    /// Create a new instance of the app with its router and state,
+    /// which can then be served with [`serve`].
     pub async fn create() -> Result<Self> {
         // Initialize services
         setup_tracing()?;
@@ -31,6 +32,7 @@ impl App {
         Ok(Self { router })
     }
 
+    /// Serve this app on the given [`TcpListener`].
     pub async fn serve(self, host: TcpListener) -> Result<()> {
         tracing::info!("Server running at {host:#?}");
         Server::from_tcp(host)?
@@ -41,6 +43,8 @@ impl App {
 
     /// Builder the router for the application.
     fn build_router(app_state: AppState) -> Router {
+        use tracing::Level;
+
         tracing::trace!("Building app");
         Router::new()
             .nest("/health", health_check::create_router())

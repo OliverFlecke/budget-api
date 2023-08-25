@@ -1,10 +1,7 @@
-use std::sync::Arc;
-
-use sqlx::PgPool;
-use tracing::{event, Level};
-use uuid::Uuid;
-
 use super::{dto, model};
+use sqlx::PgPool;
+use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ItemRepositoryError {
@@ -63,7 +60,7 @@ impl ItemRepository {
         match query.fetch_one(self.db_pool.as_ref()).await {
             Ok(id) => Ok(id),
             Err(err) => {
-                event!(Level::ERROR, "Error adding item to budget: {err:?}");
+                tracing::error!("Error adding item to budget: {err:?}");
                 Err(ItemRepositoryError::Database)
             }
         }
@@ -76,12 +73,12 @@ impl ItemRepository {
         budget_id: Uuid,
         item_id: Uuid,
     ) -> Result<(), ItemRepositoryError> {
-        event!(Level::TRACE, "[item_repository] User '{user_id}' deleting item '{item_id}' from budget '{budget_id}'");
+        tracing::trace!("[item_repository] User '{user_id}' deleting item '{item_id}' from budget '{budget_id}'");
         let query = sqlx::query!(
-            r#"with deleted as 
-            (delete from item 
-               where id = $1 
-                 and exists(select * from budget where id = $2 and user_id = $3) 
+            r#"with deleted as
+            (delete from item
+               where id = $1
+                 and exists(select * from budget where id = $2 and user_id = $3)
                returning *)
             select count(*) from deleted"#,
             item_id,
@@ -93,12 +90,12 @@ impl ItemRepository {
             Ok(x) => match x.count {
                 Some(1) => Ok(()),
                 _ => {
-                    event!(Level::ERROR, "Item '{item_id}' does not exists");
+                    tracing::error!("Item '{item_id}' does not exists");
                     Err(ItemRepositoryError::NotFound)
                 }
             },
             Err(err) => {
-                event!(Level::ERROR, "Error: {err:?}");
+                tracing::error!("Error: {err:?}");
                 Err(ItemRepositoryError::Database)
             }
         }
@@ -127,7 +124,7 @@ impl ItemRepository {
         match query.execute(self.db_pool.as_ref()).await {
             Ok(_) => Ok(()),
             Err(err) => {
-                event!(Level::ERROR, "Error: {err:?}");
+                tracing::error!("Error: {err:?}");
                 Err(ItemRepositoryError::Database)
             }
         }
@@ -142,19 +139,15 @@ impl ItemRepository {
 
         match budget_query.fetch_optional(self.db_pool.as_ref()).await {
             Ok(Some(_)) => {
-                event!(Level::TRACE, "User '{user_id}' has access to '{budget_id}'");
+                tracing::trace!("User '{user_id}' has access to '{budget_id}'");
                 true
             }
             Ok(None) => {
-                event!(
-                    Level::WARN,
-                    "User '{user_id}' does not have access to '{budget_id}'"
-                );
+                tracing::warn!("User '{user_id}' does not have access to '{budget_id}'");
                 false
             }
             Err(err) => {
-                event!(
-                    Level::ERROR,
+                tracing::error!(
                     "Error check access for user '{user_id}' to budget '{budget_id}': {err:?}"
                 );
                 false

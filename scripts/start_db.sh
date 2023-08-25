@@ -17,4 +17,3 @@ if [ ! -z ${1+x} ]; then
     echo "Importing from $1"
     cat $1 | docker exec -i budget-db psql -U budget_user
 fi
-

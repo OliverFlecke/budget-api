@@ -29,8 +29,8 @@ jobs:
           submodules: true
       - name: Migrate database
         run: |
-          for file in migrations/*.up.sql; 
-          do 
+          for file in migrations/*.up.sql;
+          do
             psql -f $file postgresql://postgres:password@localhost:5432/postgres
           done
       - name: Install ${{ matrix.toolchain }}
@@ -70,8 +70,8 @@ jobs:
           submodules: true
       - name: Migrate database
         run: |
-          for file in migrations/*.up.sql; 
-          do 
+          for file in migrations/*.up.sql;
+          do
             psql -f $file postgresql://postgres:password@localhost:5432/postgres
           done
       - name: Install stable

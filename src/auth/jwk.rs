@@ -2,7 +2,6 @@ use super::config::AuthConfig;
 use derive_getters::Getters;
 use jsonwebtoken::DecodingKey;
 use serde::Deserialize;
-use tracing::trace;
 
 static JWKS_ENDPOINT: &str = ".well-known/jwks.json";
 
@@ -82,7 +81,7 @@ impl JwkRepository {
 
     /// Updates the internal, local storage of the JWKs.
     async fn update_keys(&mut self) -> anyhow::Result<()> {
-        trace!("Fetching jwk from identity host");
+        tracing::trace!("Fetching jwk from identity host");
         self.keys = JwksResponse::fetch(self.auth_config.issuer()).await?.keys;
 
         Ok(())

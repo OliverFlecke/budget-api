@@ -8,7 +8,6 @@ use derive_getters::Getters;
 use duplicate::duplicate_item;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::trace;
 
 /// Represents the global app state for Axum.
 /// Can also be considered as the DoI container for the application.
@@ -21,7 +20,7 @@ pub struct AppState {
 
 impl AppState {
     pub async fn initialize() -> Result<Self> {
-        trace!("Initializing application services");
+        tracing::trace!("Initializing application services");
         let url = std::env::var("DATABASE_URL").expect(
             "Missing environment variable 'DATABASE_URL' provided with a connection string",
         );
