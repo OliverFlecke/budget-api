@@ -1,22 +1,20 @@
-FROM rust:1.72.0 as build
-
-RUN USER=root cargo new --bin app
+FROM clux/muslrust:stable AS chef
+USER root
+RUN cargo install cargo-chef
 WORKDIR /app
 
-ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-COPY ./Cargo.lock ./Cargo.lock
-COPY ./Cargo.toml ./Cargo.toml
-RUN cargo build --release
+FROM chef AS builder
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --target x86_64-unknown-linux-musl --recipe-path recipe.json
+COPY . .
+RUN cargo build --release --target x86_64-unknown-linux-musl --bin app
 
-RUN rm src/*.rs
-COPY sqlx-data.json .
-COPY ./src ./src
-
-RUN rm ./target/release/deps/budget_api*
-RUN cargo build --release
-
-FROM debian:buster-slim
-COPY --from=build /app/target/release/budget-api .
-
-CMD ["./budget-api"]
+FROM alpine:latest AS runtime
+RUN addgroup -S myuser && adduser -S myuser -G myuser
+COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/app /usr/local/bin/
+USER myuser
+CMD ["/usr/local/bin/app"]
