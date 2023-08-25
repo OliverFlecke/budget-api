@@ -3,12 +3,11 @@ pub(crate) mod item_repository;
 mod model;
 pub(crate) mod repository;
 
+use crate::app_state::AppState;
 use axum::{
     routing::{delete, get, post, put},
     Router,
 };
-
-use crate::app_state::AppState;
 
 pub fn create_router(state: AppState) -> Router {
     Router::new()
@@ -29,22 +28,18 @@ pub fn create_router(state: AppState) -> Router {
 }
 
 mod endpoints {
-    use std::sync::Arc;
-    use tracing::{event, Level};
-
+    use super::{
+        dto::AddItemToBudgetRequest, item_repository::ItemRepository, repository::BudgetRepository,
+    };
+    use crate::{app_state::AppState, auth::Claims, budget::dto};
     use axum::{
         debug_handler,
         extract::{Path, State},
         http::StatusCode,
         Json,
     };
+    use std::sync::Arc;
     use uuid::Uuid;
-
-    use crate::{app_state::AppState, auth::Claims, budget::dto};
-
-    use super::{
-        dto::AddItemToBudgetRequest, item_repository::ItemRepository, repository::BudgetRepository,
-    };
 
     /// Create a new budget.
     #[debug_handler(state = AppState)]
@@ -53,7 +48,7 @@ mod endpoints {
         claims: Claims,
         Json(payload): Json<dto::CreateBudget>,
     ) -> Result<String, StatusCode> {
-        event!(Level::INFO, "Creating budget");
+        tracing::info!("Creating budget");
 
         match repository
             .create_budget(claims.user_id(), &payload.title)
@@ -71,8 +66,7 @@ mod endpoints {
         claims: Claims,
         Path(budget_id): Path<Uuid>,
     ) -> Result<(), StatusCode> {
-        event!(
-            Level::INFO,
+        tracing::info!(
             "Deleting budget '{budget_id}' for user '{}'",
             claims.user_id()
         );
@@ -90,11 +84,7 @@ mod endpoints {
         Path(budget_id): Path<Uuid>,
         claims: Claims,
     ) -> Result<Json<dto::BudgetWithItems>, StatusCode> {
-        event!(
-            Level::INFO,
-            "Get budget {budget_id} and user: {}",
-            claims.user_id()
-        );
+        tracing::info!("Get budget {budget_id} and user: {}", claims.user_id());
 
         match repository.get_budget(claims.user_id(), &budget_id).await {
             Some(budget) => Ok(Json((&budget).into())),
@@ -110,7 +100,7 @@ mod endpoints {
         State(repository): State<Arc<BudgetRepository>>,
         claims: Claims,
     ) -> Json<Vec<dto::Budget>> {
-        event!(Level::INFO, "Get all budgets for user {}", claims.user_id());
+        tracing::info!("Get all budgets for user {}", claims.user_id());
 
         Json(
             repository
@@ -145,8 +135,7 @@ mod endpoints {
         claims: Claims,
         Json(payload): Json<AddItemToBudgetRequest>,
     ) -> Result<String, StatusCode> {
-        event!(
-            Level::INFO,
+        tracing::info!(
             "User '{}' add item to budget {budget_id}. Payload: {payload:?}",
             claims.user_id()
         );
@@ -167,8 +156,7 @@ mod endpoints {
         claims: Claims,
         Json(payload): Json<AddItemToBudgetRequest>,
     ) -> StatusCode {
-        event!(
-            Level::INFO,
+        tracing::info!(
             "User '{}' update item {item_id} on budget {budget_id}. Payload: {payload:?}",
             claims.user_id()
         );
@@ -189,8 +177,7 @@ mod endpoints {
         claims: Claims,
         Path((budget_id, item_id)): Path<(Uuid, Uuid)>,
     ) -> StatusCode {
-        event!(
-            Level::INFO,
+        tracing::info!(
             "User '{}' delete item {item_id} on budget {budget_id}",
             claims.user_id()
         );

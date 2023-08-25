@@ -177,22 +177,7 @@
     },
     "query": "INSERT INTO item (budget_id, category, name, amount) VALUES ($1, $2, $3, $4) RETURNING id"
   },
-  "8e647d6846e5083f66fc4b2b0cd5b3cd82a09ea4247bee6941219c5ea1646865": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Int4",
-          "Text",
-          "Uuid"
-        ]
-      }
-    },
-    "query": "UPDATE item SET category = $1, amount = $2, name = $3 WHERE id = $4"
-  },
-  "bb1edffea586eaedbff33667151b3eb883a9f613263200dcb28019ab0e33090c": {
+  "3823ca806e77058c97410898bdb9083f7ae0e4863864521ded198e37f2c342d2": {
     "describe": {
       "columns": [
         {
@@ -212,7 +197,22 @@
         ]
       }
     },
-    "query": "with deleted as \n            (delete from item \n               where id = $1 \n                 and exists(select * from budget where id = $2 and user_id = $3) \n               returning *)\n            select count(*) from deleted"
+    "query": "with deleted as\n            (delete from item\n               where id = $1\n                 and exists(select * from budget where id = $2 and user_id = $3)\n               returning *)\n            select count(*) from deleted"
+  },
+  "8e647d6846e5083f66fc4b2b0cd5b3cd82a09ea4247bee6941219c5ea1646865": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int4",
+          "Text",
+          "Uuid"
+        ]
+      }
+    },
+    "query": "UPDATE item SET category = $1, amount = $2, name = $3 WHERE id = $4"
   },
   "cd06a03ae69a667f6f33270fc60b16f18eb2d1c3df00f5a45bdabdca5191e1d4": {
     "describe": {

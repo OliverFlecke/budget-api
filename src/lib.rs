@@ -6,7 +6,6 @@ use axum::{
 };
 use std::net::TcpListener;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
-use tracing::Level;
 use tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt};
 
 pub mod app_state;
@@ -41,6 +40,8 @@ impl App {
 
     /// Builder the router for the application.
     fn build_router(app_state: AppState) -> Router {
+        use tracing::Level;
+
         tracing::trace!("Building app");
         Router::new()
             .nest("/health", health_check::create_router())
