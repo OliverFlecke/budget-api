@@ -14,7 +14,7 @@ pub mod budget;
 
 pub async fn run_server(host: &SocketAddr) -> Result<(), Box<dyn Error>> {
     // Initialize services
-    setup_tracing();
+    setup_tracing()?;
     trace!("Initialize services");
 
     let app_state = AppState::initialize().await?;
@@ -41,14 +41,18 @@ pub async fn run_server(host: &SocketAddr) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn setup_tracing() {
+fn setup_tracing() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "budget_api=debug,hyper=info,tower_http=info".into()),
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive("budget_api=debug".parse()?)
+                .add_directive("hyper=info".parse()?)
+                .add_directive("tower_http=info".parse()?),
         )
         .with(tracing_subscriber::fmt::layer().compact())
         .init();
+
+    Ok(())
 }
 
 async fn not_found(uri: Uri) -> (StatusCode, String) {
