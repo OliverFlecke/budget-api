@@ -19,6 +19,8 @@ pub struct App {
 }
 
 impl App {
+    /// Create a new instance of the app with its router and state,
+    /// which can then be served with [`serve`].
     pub async fn create() -> Result<Self> {
         // Initialize services
         setup_tracing()?;
@@ -30,6 +32,7 @@ impl App {
         Ok(Self { router })
     }
 
+    /// Serve this app on the given [`TcpListener`].
     pub async fn serve(self, host: TcpListener) -> Result<()> {
         tracing::info!("Server running at {host:#?}");
         Server::from_tcp(host)?
