@@ -1,13 +1,15 @@
-use std::{error::Error, net::SocketAddr};
+use std::net::TcpListener;
 
-use budget_api::run_server;
+use budget_api::App;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> anyhow::Result<()> {
     let port = std::env::var("PORT")
         .map(|p| p.parse::<usize>().expect("PORT is not a valid integer"))
         .unwrap_or(4000);
-    let host: SocketAddr = format!("0.0.0.0:{port}").parse().unwrap();
+    let listener = TcpListener::bind(format!("0.0.0.0:{port}"))?;
 
-    run_server(&host).await
+    App::create().await?.serve(listener).await?;
+
+    Ok(())
 }

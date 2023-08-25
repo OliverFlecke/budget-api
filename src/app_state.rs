@@ -1,15 +1,14 @@
-use std::{error::Error, sync::Arc};
-
-use axum::extract::FromRef;
-use derive_getters::Getters;
-use duplicate::duplicate_item;
-use sqlx::PgPool;
-use tracing::trace;
-
 use crate::{
     auth::{config::AuthConfig, jwk::JwkRepository},
     budget::{item_repository::ItemRepository, repository::BudgetRepository},
 };
+use anyhow::Result;
+use axum::extract::FromRef;
+use derive_getters::Getters;
+use duplicate::duplicate_item;
+use sqlx::PgPool;
+use std::sync::Arc;
+use tracing::trace;
 
 /// Represents the global app state for Axum.
 /// Can also be considered as the DoI container for the application.
@@ -21,7 +20,7 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub async fn initialize() -> Result<Self, Box<dyn Error>> {
+    pub async fn initialize() -> Result<Self> {
         trace!("Initializing application services");
         let url = std::env::var("DATABASE_URL").expect(
             "Missing environment variable 'DATABASE_URL' provided with a connection string",

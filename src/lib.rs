@@ -1,47 +1,61 @@
-use crate::{app_state::AppState, budget::create_budget_router};
+use crate::app_state::AppState;
+use anyhow::Result;
 use axum::{
     http::{StatusCode, Uri},
-    Router,
+    Router, Server,
 };
-use std::{error::Error, net::SocketAddr};
+use std::net::TcpListener;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
-use tracing::{info, trace, warn, Level};
+use tracing::Level;
 use tracing_subscriber::{self, layer::SubscriberExt, util::SubscriberInitExt};
 
 pub mod app_state;
 pub mod auth;
 pub mod budget;
+mod health_check;
 
-pub async fn run_server(host: &SocketAddr) -> Result<(), Box<dyn Error>> {
-    // Initialize services
-    setup_tracing()?;
-    trace!("Initialize services");
-
-    let app_state = AppState::initialize().await?;
-
-    // Build app
-    trace!("Building app");
-    let app = Router::new()
-        .nest("/budget", create_budget_router(app_state))
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
-                .on_request(DefaultOnRequest::new().level(Level::INFO))
-                .on_response(DefaultOnResponse::new().level(Level::INFO)),
-        )
-        .fallback(not_found);
-
-    // Run app
-    info!("Server running at {host}");
-    axum::Server::bind(&host)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
-
-    Ok(())
+#[derive(Debug)]
+pub struct App {
+    router: Router,
 }
 
-fn setup_tracing() -> Result<(), Box<dyn Error>> {
+impl App {
+    pub async fn create() -> Result<Self> {
+        // Initialize services
+        setup_tracing()?;
+        tracing::trace!("Initialize services");
+
+        let app_state = AppState::initialize().await?;
+        let router = Self::build_router(app_state);
+
+        Ok(Self { router })
+    }
+
+    pub async fn serve(self, host: TcpListener) -> Result<()> {
+        tracing::info!("Server running at {host:#?}");
+        Server::from_tcp(host)?
+            .serve(self.router.into_make_service())
+            .await?;
+        Ok(())
+    }
+
+    /// Builder the router for the application.
+    fn build_router(app_state: AppState) -> Router {
+        tracing::trace!("Building app");
+        Router::new()
+            .nest("/health", health_check::create_router())
+            .nest("/budget", budget::create_router(app_state))
+            .layer(
+                TraceLayer::new_for_http()
+                    .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+                    .on_request(DefaultOnRequest::new().level(Level::INFO))
+                    .on_response(DefaultOnResponse::new().level(Level::INFO)),
+            )
+            .fallback(not_found)
+    }
+}
+
+fn setup_tracing() -> Result<()> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::from_default_env()
@@ -56,6 +70,6 @@ fn setup_tracing() -> Result<(), Box<dyn Error>> {
 }
 
 async fn not_found(uri: Uri) -> (StatusCode, String) {
-    warn!("Path not found {uri}");
+    tracing::warn!("Path not found {uri}");
     (StatusCode::NOT_FOUND, format!("No route for '{uri}'"))
 }

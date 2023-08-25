@@ -1,11 +1,8 @@
-use std::error::Error;
-
+use super::config::AuthConfig;
 use derive_getters::Getters;
 use jsonwebtoken::DecodingKey;
 use serde::Deserialize;
 use tracing::trace;
-
-use super::config::AuthConfig;
 
 static JWKS_ENDPOINT: &str = ".well-known/jwks.json";
 
@@ -16,7 +13,7 @@ struct JwksResponse {
 
 impl JwksResponse {
     /// Fetch JWKS keys from the and endpoint
-    async fn fetch(auth_server: &str) -> Result<JwksResponse, reqwest::Error> {
+    async fn fetch(auth_server: &str) -> anyhow::Result<JwksResponse, reqwest::Error> {
         reqwest::get(format!("{auth_server}{JWKS_ENDPOINT}"))
             .await?
             .json::<JwksResponse>()
@@ -54,7 +51,7 @@ impl From<AuthConfig> for JwkRepository {
 }
 
 impl JwkRepository {
-    pub async fn new(auth_config: AuthConfig) -> Result<Self, Box<dyn Error>> {
+    pub async fn new(auth_config: AuthConfig) -> anyhow::Result<Self> {
         let jwks = JwksResponse::fetch(auth_config.issuer()).await?;
 
         Ok(Self {
@@ -74,7 +71,7 @@ impl JwkRepository {
     }
 
     /// Refresh JWKs and returns the current one.
-    pub async fn get_key_with_refresh(&mut self) -> Result<Jwk, Box<dyn Error>> {
+    pub async fn get_key_with_refresh(&mut self) -> anyhow::Result<Jwk> {
         // TODO: Should be update at a certain frequency.
         if self.keys.is_empty() {
             self.update_keys().await?;
@@ -84,7 +81,7 @@ impl JwkRepository {
     }
 
     /// Updates the internal, local storage of the JWKs.
-    async fn update_keys(&mut self) -> Result<(), Box<dyn Error>> {
+    async fn update_keys(&mut self) -> anyhow::Result<()> {
         trace!("Fetching jwk from identity host");
         self.keys = JwksResponse::fetch(self.auth_config.issuer()).await?.keys;
 
